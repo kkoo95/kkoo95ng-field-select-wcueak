@@ -4,7 +4,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { AppComponent } from './app.component';
 import { FieldSelectComponent } from './select.component';
-import { LabeledFieldLabel, TemplatedFieldLabel } from './labeled-field';
+import { FieldMessages, LabeledFieldLabel, TemplatedFieldLabel } from './labeled-field';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { ExistsValidatorDirective } from './exists-validator.directive';
 import { NgOptionHighlightModule } from '@ng-select/ng-option-highlight';
@@ -13,7 +13,7 @@ import { FieldPlainTextComponent } from './plain.component';
 
 @NgModule({
   imports:      [ BrowserModule, FormsModule, ReactiveFormsModule, NgSelectModule, NgOptionHighlightModule, HttpClientModule ],
-  declarations: [ AppComponent, FieldSelectComponent, TemplatedFieldLabel, LabeledFieldLabel, ExistsValidatorDirective, FieldPlainTextComponent ],
+  declarations: [ AppComponent, FieldSelectComponent, TemplatedFieldLabel, LabeledFieldLabel, ExistsValidatorDirective, FieldPlainTextComponent, FieldMessages ],
   bootstrap:    [ AppComponent ]
 })
 export class AppModule { }

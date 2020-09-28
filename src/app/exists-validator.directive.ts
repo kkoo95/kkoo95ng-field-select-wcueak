@@ -50,7 +50,7 @@ export class ExistsValidatorDirective<T> extends ChangingValidator implements Va
       if (value != null && typeof value != 'number') {
         return Object.keys(value).length == 0 ? { empty : true } : null;
       }
-      if (value <= 2) {
+      if (value != null && value <= 2) {
         return { too_low : true };
       }
       return null;

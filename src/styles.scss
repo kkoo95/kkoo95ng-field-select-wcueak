@@ -3,13 +3,17 @@
 
 /* Add application styles & imports to this file! */
 input:invalid, input:focus:invalid {
-  border-color: red;
-  outline-color: red;
+  border: 1px solid red;
+  outline: 1px solid red;
 }
 
-.ng-invalid, .ng-invalid:focus {
-  border-color: rgb(255, 0, 76);
-  outline-color: rgb(255, 0, 76);
+.ng-dirty {
+  &.ng-invalid {
+    .form-control {
+      border: 1px solid rgb(255, 0, 76);
+      // outline: 1px solid rgb(255, 0, 76);
+    }
+  }
 }
 
 .error-label {

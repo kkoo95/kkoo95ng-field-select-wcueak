@@ -78,8 +78,6 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   @ContentChild(LabeledFieldLabel) labelTpl: LabeledFieldLabel;
 
   internalControl: AbstractControl;
-  errorMessages: string[];
-  messages: MessageRegistry;
 
   onTouched: Function;
   protected _options: LabeledFieldOptions;
@@ -105,6 +103,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     
     // must create control validators at construction time to not miss first writeValue validation
     this.internalControl = this.createFormControl();
+    // this.internalControl.statusChanges.subscribe(_ => this.availableErrors = this.getActualErrors())
   }
 
   createFormControl() {
@@ -130,8 +129,6 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   }
 
   ngOnInit(): void {
-    this.translateMessages();
-
     if (this.ngControl) {
       /* Try to assign same id each time field is initialized
          in order to have correct autocomplete suggestions */
@@ -141,54 +138,25 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
         this.id = this.RANDOM_ID_PREFIX + ++uid;
       }
     }
- 
-    this.setupValidation();
-  }
-
-  unsub: Subscription;
-  protected setupValidation() {
-    let tryRefresh = () => {
-      if (!this.skipRefreshErrorDisplay) {
-        this.refreshErrorDisplay()
-      }
-    };
-
-    this.unsub = this.ngControl.statusChanges.subscribe(tryRefresh)
-    this.watchOuterValidator();
-    tryRefresh();
-  }
-
-  protected refreshErrorDisplay() {
-    this.errorMessages = null;
-
-    let errors = this.getActualErrors(); 
-
-    // covering the case where field is already invalid at init. must tweak dirty state to let our css do its job
-    if (errors) {
-      if (this.ngControl.control.pristine) {
-        // remove errors we don't want there messages being displayed at init
-        this.removePristineErrors(errors)
-      }
-
-      if (ObjectUtils.isNotEmpty(errors)) {
-        // our CSS requires a dirty state to display error indicator.
-        this.ngControl.control.markAsDirty({onlySelf: true});
-      }
-    }
-
-    this.errorMessages = this.buildErrorMessages(errors);
+    this.prepareMessages()
   }
 
   protected getActualErrors() {
-    return this.ngControl.errors || this.internalControl.errors 
-      ? {...this.ngControl.errors, ...this.internalControl.errors}
-      : null;
+    return {...this.internalControl.errors}
   }
 
-  protected isActuallyInvalid() {
-    let actualErrors = this.getActualErrors();
-    return actualErrors ? Object.keys(actualErrors).length > 0 : false;
-  }
+  // protected getActualErrors() {
+  //   return this.ngControl.errors || this.internalControl.errors 
+  //     ? {...this.ngControl.errors, ...this.internalControl.errors}
+  //     : null;
+  // }
+
+  // protected isActuallyInvalid() {
+  //   let actualErrors = this.getActualErrors();
+  //   return actualErrors ? Object.keys(actualErrors).length > 0 : false;
+  // }
+
+  availableErrors: ValidationErrors;
 
   protected removePristineErrors(errors: ValidationErrors) {
     delete errors.required;
@@ -218,57 +186,16 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
       if (wasPristine) {
         this.ngControl.control.markAsPristine({onlySelf: true});
       }
-      this.refreshErrorDisplay();
+      // this.refreshErrorDisplay();
     }
   }
 
-  /* since we can't provide ourself as NG_VALIDATOR we must have a way to still validate outer control by passing local errors to it */
-  protected watchOuterValidator() {
-    // this.overrideSetValidators();
-  }
-
-  protected overrideSetValidators() {
-    const { control } = this.ngControl;
-    const localErrors = _ => {
-      let outerError = control.errors;
-      return this.internalControl.errors
-    };
-
-    const _super = control['_super'] = {
-      setValidators: control.setValidators,
-      validator: control.validator
-    }
-
-    // hacky stuff: proxifying setValidators because not enough API to watch modification
-    control.setValidators = new Proxy(control.setValidators, {
-      apply: (target, $this, args) => {
-        // call real method to coerce validators
-        target.apply($this, args);
-        _super.validator = control.validator;
-        // everytime control's validator is changing, we must recompose it with local errors for proper invalidation
-        return target.call($this, Validators.compose([control.validator, localErrors]))
-      }
-    });
-   
-    control.setValidators(control.validator);
-  }
-
-  protected removeOverrideSetValidators() {
-    const { control } = this.ngControl;
-    const { _super } = control as any;
-
-    // turn off hacky stuff
-    control.setValidators = _super.setValidators;
-    control.setValidators(_super.validators);
-
-    delete control['_super'];
+  get internalErrors() {
+    return this.internalControl.errors;
   }
 
   ngOnDestroy() {
     if (this.ngControl) {
-      this.unsub.unsubscribe();
-      // this.removeOverrideSetValidators();
-
       // there is a memory leak when combining formControl and ngIf: CVA is not unlinked properly when directive is destroyed.
       // see https://github.com/angular/angular/pull/37566
       // TODO(jar) wait patiently for upgrade to v10.1+
@@ -284,7 +211,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
       this.placeholder = this.safeTranslate(this.placeholder);
     }
     if (changes.userMessages && !changes.userMessages.isFirstChange()) {
-      this.translateMessages();
+      this.prepareMessages()
     }
   }
 
@@ -305,7 +232,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   }
 
   protected safeTranslate(key: string) {
-    return '$'+key;
+    return '$$'+key;
   }
 
   protected prepareMessages(): MessageRegistry {
@@ -314,21 +241,14 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
       return {};
     } else {
       this.userMessages = {
-        required: 'MANAGER.TUNNEL.COMMON.PERSON-FORM.MSG.MANDATORY-FIELD',
-        empty: 'EMPTY!',
-        field_binding: '[f] binding',
-        field_exists: '[f] exists',
+        required: 'Required',
+        empty: 'Empty!',
+        field_binding: '[field]binding',
+        field_exists: '[field]exists',
         ...this.userMessages
       }
       return this.userMessages;
     }
-  }
-
-  protected translateMessages() {
-    this.messages = this.prepareMessages();
-
-    Object.keys(this.messages)
-      .forEach(k => this.messages[k] = this.safeTranslate(this.messages[k]));
   }
 
   onChanged;
@@ -342,22 +262,13 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   }
 
   writeValue(value: any): void {
-    this.internalControl.setValue(value);
+    this.internalControl.setValue(value, {emitEvent: false});
+    this.availableErrors = this.getActualErrors()
   }
 
   setDisabledState(isDisabled: boolean): void {
     isDisabled ? this.internalControl.disable({emitEvent: false}) : this.internalControl.enable({emitEvent: false});
   }
-
-  protected buildErrorMessages(errors: {}): string[] {
-    if (errors == null) {
-      return [];
-    }
-    return Object.keys(errors).map((e, i, arr) => this.messages[e] || arr[i]);
-    return Object.keys(this.messages)
-      .filter(k => ObjectUtils.resolveNested(errors, k) != null)
-      .map(k => this.messages[k]);
-  };
 
   @HostBinding('class.disabled')
   get disabled() {
@@ -401,6 +312,102 @@ export class TemplatedFieldLabel {
 
   hasLabel() {
     return this.owner.label != null || this.owner.labelTpl != null;
+  }
+}
+
+
+@Component({
+  selector: 'field-messages',
+  template: `
+    <div class="error-label" *ngFor="let err of errorMessages">{{err}}</div>
+  `
+})
+export class FieldMessages {
+  errorMessages: string[];
+
+  @Input() availableErrors: ValidationErrors;
+  @Input() userMessages: MessageRegistry = {};
+  // @Input() skipRefreshErrorDisplay: boolean;
+
+  protected keyValueDiffers: KeyValueDiffers;
+  protected ownerKeyValueDiffer: KeyValueDiffer<string, any>;
+  protected cdr: ChangeDetectorRef;
+  protected messages: MessageRegistry;
+  protected unsub: Subscription;
+
+  constructor(public owner: LabeledField,
+              @Optional() public ngControl: NgControl,
+              protected injector: Injector) {
+    this.keyValueDiffers = this.injector.get(KeyValueDiffers);
+    this.cdr = this.injector.get(ChangeDetectorRef);
+
+    this.ownerKeyValueDiffer = this.keyValueDiffers.find(this.owner).create();
+  }
+
+  ngOnInit(): void {
+    this.setupValidation();
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes.userMessages) {
+      this.translateMessages();
+    }
+    this.refreshErrorDisplay();
+  }
+
+  protected translateMessages() {
+    this.messages = this.userMessages;
+
+    Object.keys(this.messages)
+      .forEach(k => this.messages[k] = this.safeTranslate(this.messages[k]));
+  }
+
+  ngOnDestroy() {
+    if (this.ngControl) {
+      this.unsub.unsubscribe();
+    }
+  }
+
+  protected setupValidation() {
+    let tryRefresh = () => this.refreshErrorDisplay();
+
+    // subscribing to control to avoid double handling when outer control directive gets updated
+    this.unsub = this.ngControl.control.statusChanges.subscribe(tryRefresh)
+
+    if (this.errorMessages == null) {
+      tryRefresh();
+    }
+  }
+
+  protected refreshErrorDisplay() {
+    let errors = {...this.ngControl.errors, ...this.availableErrors}
+
+    // covering the case where field is already invalid at init. must tweak dirty state to let our css do its job
+    if (this.ngControl.control.pristine) {
+      // remove errors we don't want there messages being displayed at init
+      // this.removePristineErrors(errors)
+    }
+
+    if (ObjectUtils.isNotEmpty(errors)) {
+      // our CSS requires a dirty state to display error indicator.
+      // this.ngControl.control.markAsDirty();
+    }
+
+    this.errorMessages = this.buildErrorMessages(errors);
+  }
+
+  protected buildErrorMessages(errors: {}): string[] {
+    if (errors == null) {
+      return [];
+    }
+    return Object.keys(errors).map((e, i, arr) => this.messages[e] || arr[i]);
+    return Object.keys(this.messages)
+      .filter(k => ObjectUtils.resolveNested(errors, k) != null)
+      .map(k => this.messages[k]);
+  };
+  
+  protected safeTranslate(key: string) {
+    return '$'+key;
   }
 }
 

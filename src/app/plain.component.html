@@ -1,5 +1,6 @@
 <div>
   <piTemplatedFieldLabel></piTemplatedFieldLabel>
   <div class="form-control bg-light">{{ displayValue }}</div>
-  <div class="error-label" *ngFor="let err of errorMessages">{{err}}</div>
+  <field-messages [availableErrors]="availableErrors" [userMessages]="userMessages"></field-messages>
 </div> 
+ 
