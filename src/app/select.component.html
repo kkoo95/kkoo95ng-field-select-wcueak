@@ -1,0 +1,44 @@
+<div>
+  <piTemplatedFieldLabel></piTemplatedFieldLabel>
+  <ng-select #select [formControl]="fc"
+             piFormControlErrorClasses
+             [items]="items"
+             [labelForId]="id"
+             [bindLabel]="bindLabel"
+             [bindValue]="bindValue"
+             [multiple]="multiple"
+             [loading]="loading"
+             [clearable]="clearable"
+             piConfirmChange="confirmChange"
+             [placeholder]="placeholder"
+             piAutofocus="id" focusOnEvent="true"
+             [searchFn]="searchFn"
+             (blur)="onTouched()"
+             (clear)="emit('clear', $event)"
+             [hideSelected]="hideSelected"
+             ppiExists="existenceItems" eexistsKey="bindValue"
+             class="sided-form-control">
+    <ng-template ng-label-tmp let-item="item" let-clear="clear">
+      <ng-container *ngTemplateOutlet="labelTemplate || defaultLabelTemplate; context: {
+        $implicit: item,
+        itemLabel: bindLabel ? item[bindLabel] : item,
+        clear: clear}">
+      </ng-container>
+    </ng-template>
+    <ng-template ng-option-tmp let-item="item" let-search="searchTerm">
+      <ng-container *ngTemplateOutlet="optionTemplate || defaultOptionTemplate; context: {
+        $implicit: item,
+        itemLabel: bindLabel ? item[bindLabel] : item,
+        searchTerm: search
+      }"></ng-container>
+    </ng-template>
+  </ng-select>
+  <div class="error-label" *ngFor="let err of errorMessages">{{err}}</div>
+</div>
+<ng-template #defaultLabelTemplate let-item let-itemLabel="itemLabel" let-clear="clear">
+  <span class="ng-value-icon left" *ngIf="clearable" (click)="clear(item);" aria-hidden="true">×</span>
+  <span class="ng-value-label">{{ itemLabel }}</span>
+</ng-template>
+<ng-template #defaultOptionTemplate let-itemLabel="itemLabel" let-search="searchTerm">
+  <span title="{{itemLabel}}" [ngOptionHighlight]="search">{{ itemLabel }}</span>
+</ng-template>

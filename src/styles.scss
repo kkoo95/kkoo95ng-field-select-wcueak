@@ -1,0 +1,18 @@
+@import url('https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css');
+@import "~@ng-select/ng-select/themes/default.theme.css";
+
+/* Add application styles & imports to this file! */
+input:invalid, input:focus:invalid {
+  border-color: red;
+  outline-color: red;
+}
+
+.ng-invalid, .ng-invalid:focus {
+  border-color: rgb(255, 0, 76);
+  outline-color: rgb(255, 0, 76);
+}
+
+.error-label {
+  color: red;
+  font-size: 0.8rem;
+}

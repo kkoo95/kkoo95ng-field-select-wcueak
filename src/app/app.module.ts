@@ -1,0 +1,19 @@
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+
+import { AppComponent } from './app.component';
+import { FieldSelectComponent } from './select.component';
+import { LabeledFieldLabel, TemplatedFieldLabel } from './labeled-field';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { ExistsValidatorDirective } from './exists-validator.directive';
+import { NgOptionHighlightModule } from '@ng-select/ng-option-highlight';
+import { HttpClientModule } from '@angular/common/http';
+import { FieldPlainTextComponent } from './plain.component';
+
+@NgModule({
+  imports:      [ BrowserModule, FormsModule, ReactiveFormsModule, NgSelectModule, NgOptionHighlightModule, HttpClientModule ],
+  declarations: [ AppComponent, FieldSelectComponent, TemplatedFieldLabel, LabeledFieldLabel, ExistsValidatorDirective, FieldPlainTextComponent ],
+  bootstrap:    [ AppComponent ]
+})
+export class AppModule { }
