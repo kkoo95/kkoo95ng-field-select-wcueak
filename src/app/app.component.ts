@@ -23,7 +23,7 @@ export class AppComponent  {
   data1Mode = true;
   data: any = !this.multiple ? 29 : [29];
 
-  // @ViewChild('dataModelDir', {static: true}) dataModel: NgModel;
+  @ViewChild('dataModelDir', {static: true}) dataModel: NgModel;
 
   status;
   pristine;
@@ -33,10 +33,10 @@ export class AppComponent  {
   ngOnInit() {
     this.data = {};
     this.data = 0;
-    // this.dataModel.statusChanges.subscribe(_ => {
-    //   this.status = this.dataModel.status
-    //   this.pristine = this.dataModel.pristine
-    // })
+    this.dataModel.statusChanges.subscribe(_ => {
+      this.status = JSON.stringify(this.dataModel.errors)
+      this.pristine = this.dataModel.pristine
+    })
     of(EMPTY).subscribe(_ => this.rule = '[ \\d]')
     this.reload();
   }
@@ -44,18 +44,18 @@ export class AppComponent  {
   ngAfterViewInit() {
   }
 
-  // get dataModelStatus() :{
-    // return this.dataModel.status;
-  // }
+  get dataModelStatus() {
+    return JSON.stringify(this.dataModel.errors);
+  }
 
   reload() {
     this.loading = true;
 
     // this.http.get('https://cors-anywhere.herokuapp.com/https://dummy.restapiexample.com/api/v1/employees')
-    // this.http.get('https://jsonplaceholder.typicode.com/users')
+    // this.http.get('https://jsonplaceholder.typicode.com/users')   
     of([...json])
       .pipe(
-        delay(600)
+        delay(1000)
       )
       .subscribe((result: any) => {
         this.loading = false;
