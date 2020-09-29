@@ -31,6 +31,8 @@ export class AppComponent  {
   constructor(protected http: HttpClient) {}
 
   ngOnInit() {
+    this.data = {};
+    this.data = 0;
     // this.dataModel.statusChanges.subscribe(_ => {
     //   this.status = this.dataModel.status
     //   this.pristine = this.dataModel.pristine
@@ -75,16 +77,14 @@ export class AppComponent  {
     return array;
   }
 
-  changeMode(val) {
+  changeMode(val: boolean) {
     this.data1Mode = val;
     this.data1.setValue({});
     this.data1.errors;
     this.data1.hasError('exists');
-    // if (val == 1) {
-    //   this.data1 = this.data1[0];
+    // if (!val) {
+    //   this.data1.markAsPristine()
     // }
-    // else {
-    //   this.data1 = [this.data1];
-    // }
+    this.data = {};
   }
 }
