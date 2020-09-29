@@ -47,11 +47,11 @@ export class ExistsValidatorDirective<T> extends ChangingValidator implements Va
   protected createValidator(): ValidatorFn {
     return (control) => {
       let { value } = control;
-      if (value != null && typeof value != 'number') {
-        return Object.keys(value).length == 0 ? { empty : true } : null;
-      }
-      if (value != null && value <= 2) {
+      if (value != null && (typeof value == 'number' || typeof value == 'string') && +value <= 2) {
         return { too_low : true };
+      }
+      if (value != null) {
+        return Object.keys(value).length == 0 || (+value === 3) ? { empty : true } : null;
       }
       return null;
     }

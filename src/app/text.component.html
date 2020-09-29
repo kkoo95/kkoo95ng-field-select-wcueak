@@ -1,0 +1,9 @@
+<div>
+  <piTemplatedFieldLabel></piTemplatedFieldLabel>
+  <input [id]="id" [formControl]="fc" [type]="type" class="form-control"
+         [attr.readonly]="readonly"
+         [attr.placeholder]="placeholder" [attr.autofocus]="autofocus" [attr.autocomplete]="autocomplete"
+         [maxlength]="maxlength"
+         (blur)="onTouched()">
+  <field-messages [availableErrors]="availableErrors" [userMessages]="userMessages"></field-messages>
+</div>      

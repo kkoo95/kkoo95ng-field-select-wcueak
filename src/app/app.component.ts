@@ -32,6 +32,7 @@ export class AppComponent  {
 
   ngOnInit() {
     this.data = {};
+    this.data = 0;
     // this.dataModel.statusChanges.subscribe(_ => {
     //   this.status = this.dataModel.status
     //   this.pristine = this.dataModel.pristine

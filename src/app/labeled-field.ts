@@ -21,7 +21,7 @@ Inject,
 forwardRef,
 isDevMode
 } from '@angular/core';
-import { ControlValueAccessor, FormControl, NgControl, RequiredValidator, ValidationErrors, Validators, ValidatorFn, AbstractControl } from "@angular/forms";
+import { ControlValueAccessor, FormControl, RequiredValidator, ValidationErrors, Validators, ValidatorFn, AbstractControl, NG_VALIDATORS, NgControl } from "@angular/forms";
 import { Subscription } from 'rxjs';
 import { ObjectUtils } from "./object-utils";
 
@@ -30,13 +30,13 @@ export const DEBUG_FIELD_ERRORS = isDevMode() && true;
 export type ValidationResult = null | any;
 export type ValidationResultFn = (control: AbstractControl) => ValidationResult;
 export type PiControlValidators = { [x: string]: ValidationResult | ValidationResultFn } | ValidatorFn | ValidatorFn[];
-
+ 
 @Directive({selector: 'ng-template[piFieldLabel]'})
 export class LabeledFieldLabel {
   constructor(public templateRef: TemplateRef<any>) {}
 }
 
-let uid = 0;
+let uid = 0; 
 
 export type MessageRegistry = { [x: string]: string };
 
@@ -78,6 +78,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   @ContentChild(LabeledFieldLabel) labelTpl: LabeledFieldLabel;
 
   internalControl: AbstractControl;
+  availableErrors: ValidationErrors;
 
   onTouched: Function;
   protected _options: LabeledFieldOptions;
@@ -88,14 +89,17 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   protected skipRefreshErrorDisplay = false;
 
   readonly RANDOM_ID_PREFIX: string = 'pi-field-';
+  
+  public ngControl: any;
 
-  constructor(@Self() @Optional() public ngControl: NgControl,
-              protected injector: Injector) {
+  constructor(protected injector: Injector) {
     this.keyValueDiffers = this.injector.get(KeyValueDiffers);
     this.cdr = this.injector.get(ChangeDetectorRef);
+    // let vals = injector.get(NG_VALIDATORS)
+    // vals.push(_ => this.internalControl.validator ? this.internalControl.validator(this.internalControl) : null);
     this.requiredValidator = this.injector.get(RequiredValidator, null, InjectFlags.Optional);
 
-    if (this.ngControl) {
+    if (this.ngControl) { 
       // Note: we provide the value accessor through here, instead of
       // the `providers` to avoid running into a circular import.
       this.ngControl.valueAccessor = this;
@@ -103,11 +107,10 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     
     // must create control validators at construction time to not miss first writeValue validation
     this.internalControl = this.createFormControl();
-    // this.internalControl.statusChanges.subscribe(_ => this.availableErrors = this.getActualErrors())
   }
 
   createFormControl() {
-    return new LabeledFormControl(null, this.createControlValidators());
+    return new LabeledFormControl(null);
   }
 
   createControlValidators(): ValidatorFn | ValidatorFn[] {
@@ -129,6 +132,8 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   }
 
   ngOnInit(): void {
+    this.ngControl = this.injector.get(NgControl, null, InjectFlags.SkipSelf | InjectFlags.Optional);
+
     if (this.ngControl) {
       /* Try to assign same id each time field is initialized
          in order to have correct autocomplete suggestions */
@@ -138,25 +143,18 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
         this.id = this.RANDOM_ID_PREFIX + ++uid;
       }
     }
-    this.prepareMessages()
+
+    this.internalControl.setValidators(this.createControlValidators());
+    this.ngControl.statusChanges.subscribe(_ => {
+      // console.log('internalControl.statusChanges', this.ngControl.errors, this.internalControl.errors)
+      // this.availableErrors = this.ngControl.errors;
+    })
+    this.prepareMessages();
   }
 
-  protected getActualErrors() {
-    return {...this.internalControl.errors}
+  protected getDisplayErrors() {
+    return {...this.ngControl.errors};
   }
-
-  // protected getActualErrors() {
-  //   return this.ngControl.errors || this.internalControl.errors 
-  //     ? {...this.ngControl.errors, ...this.internalControl.errors}
-  //     : null;
-  // }
-
-  // protected isActuallyInvalid() {
-  //   let actualErrors = this.getActualErrors();
-  //   return actualErrors ? Object.keys(actualErrors).length > 0 : false;
-  // }
-
-  availableErrors: ValidationErrors;
 
   protected removePristineErrors(errors: ValidationErrors) {
     delete errors.required;
@@ -173,11 +171,12 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     this.skipRefreshErrorDisplay = !markAsDirty;
     // any of these calls will call outer control validators and reset its status; and also cva watchers which will mark it as dirty...
     if (value !== undefined) {
-      this.internalControl.setValue(value);
+      this.writeValue(value)
+      // this.internalControl.setValue(value);
     }
-    // udpate validity only ()
-    else if (this.internalControl.validator) {
-      this.internalControl.setErrors(this.internalControl.validator(this.internalControl));
+    else {
+      this.writeValue(this.fc.value);
+      // this.internalControl.updateValueAndValidity();
     }
 
     this.skipRefreshErrorDisplay = false;
@@ -188,10 +187,6 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
       }
       // this.refreshErrorDisplay();
     }
-  }
-
-  get internalErrors() {
-    return this.internalControl.errors;
   }
 
   ngOnDestroy() {
@@ -227,7 +222,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
         });
         this.ngOnChanges(changes);
         this.cdr.markForCheck();
-      }
+      } 
     }
   }
 
@@ -247,23 +242,24 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
         field_exists: '[field]exists',
         ...this.userMessages
       }
-      return this.userMessages;
-    }
+      return this.userMessages;  
+    } 
   }
 
-  onChanged;
-  registerOnChange(fn: any): void {
-    this.onChanged = fn;
+  registerOnChange(fn: (v:any) => void): void {
     this.internalControl.valueChanges.subscribe(v => fn(v));
   }
 
-  registerOnTouched(fn: any): void {
+  registerOnTouched(fn: () => void): void {
     this.onTouched = fn;
   }
 
-  writeValue(value: any): void {
+  writeValue(value: any): void { 
+    // emitEvent:true makes outer control dirty even at init (because fired right back up through OnChange handler)
     this.internalControl.setValue(value, {emitEvent: false});
-    this.availableErrors = this.getActualErrors()
+    // needed because emitEvent:false (for field-messages and control-errors directives)
+    this.internalControl.setErrors(this.internalControl.errors);
+    this.internalControl.hasError('')
   }
 
   setDisabledState(isDisabled: boolean): void {
@@ -297,6 +293,10 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
 
     return false;
   }
+
+  validate(control: AbstractControl) {
+    return this.internalControl.errors;//this.internalControl.validator ? this.internalControl.validator(control) : null;
+  }
 }
 
 @Component({
@@ -325,6 +325,7 @@ export class TemplatedFieldLabel {
 export class FieldMessages {
   errorMessages: string[];
 
+  @Input() skip: boolean;
   @Input() availableErrors: ValidationErrors;
   @Input() userMessages: MessageRegistry = {};
   // @Input() skipRefreshErrorDisplay: boolean;
@@ -334,7 +335,7 @@ export class FieldMessages {
   protected cdr: ChangeDetectorRef;
   protected messages: MessageRegistry;
   protected unsub: Subscription;
-
+  
   constructor(public owner: LabeledField,
               @Optional() public ngControl: NgControl,
               protected injector: Injector) {
@@ -345,14 +346,20 @@ export class FieldMessages {
   }
 
   ngOnInit(): void {
+    this.translateMessages();
     this.setupValidation();
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes.userMessages) {
+    if (changes.userMessages && !changes.userMessages.firstChange) {
       this.translateMessages();
     }
-    this.refreshErrorDisplay();
+    if (
+          // (changes.availableErrors && !changes.availableErrors.firstChange)
+          // || 
+          (changes.userMessages && !changes.userMessages.firstChange)) {
+      this.refreshErrorDisplay();
+    }
   }
 
   protected translateMessages() {
@@ -369,18 +376,17 @@ export class FieldMessages {
   }
 
   protected setupValidation() {
-    let tryRefresh = () => this.refreshErrorDisplay();
+    // subscribing to subcontrol to avoid double handling when outer control directive gets updated (NOT)
+    this.unsub = this.ngControl.statusChanges.subscribe(this.refreshErrorDisplay.bind(this))
 
-    // subscribing to control to avoid double handling when outer control directive gets updated
-    this.unsub = this.ngControl.control.statusChanges.subscribe(tryRefresh)
-
-    if (this.errorMessages == null) {
-      tryRefresh();
-    }
-  }
+    if (this.errorMessages == null) { 
+      this.refreshErrorDisplay();
+    } 
+  } 
 
   protected refreshErrorDisplay() {
-    let errors = {...this.ngControl.errors, ...this.availableErrors}
+    // console.log('refreshErrorDisplay', this.ngControl.errors)
+    let errors = {...this.ngControl.errors}
 
     // covering the case where field is already invalid at init. must tweak dirty state to let our css do its job
     if (this.ngControl.control.pristine) {
@@ -397,7 +403,7 @@ export class FieldMessages {
   }
 
   protected buildErrorMessages(errors: {}): string[] {
-    if (errors == null) {
+    if (errors == null || this.skip) {
       return [];
     }
     return Object.keys(errors).map((e, i, arr) => this.messages[e] || arr[i]);

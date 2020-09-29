@@ -19,7 +19,7 @@ export class FieldPlainTextComponent extends LabeledField {
 
   get displayValue() {
     return ObjectUtils.resolveNested(this.fixedValue || this.fc.value, this.bindLabel);
-  }
+  } 
 
   writeValue(value: any): void {
     super.writeValue(value);

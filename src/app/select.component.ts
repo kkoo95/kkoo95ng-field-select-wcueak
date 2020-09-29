@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Injector, Input, OnChanges, OnInit, Optional, Output, Self, SimpleChanges, TemplateRef } from "@angular/core";
-import { NgControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { NgControl, NG_VALIDATORS,  NG_VALUE_ACCESSOR,    ValidationErrors, ValidatorFn } from '@angular/forms';
 import { LabeledField, LabeledFieldOptions } from './labeled-field';
 import { ArrayUtils } from "./array-utils";
 import { ObjectUtils } from "./object-utils";
@@ -25,7 +25,9 @@ type FieldSelectOptionKeys = keyof FieldSelectComponent;
   templateUrl: 'select.component.html',
   styleUrls: ['select.component.scss'],
   providers: [
-    {provide: LabeledField, useExisting: FieldSelectComponent}
+    {provide: LabeledField, useExisting: FieldSelectComponent},
+    {provide: NG_VALUE_ACCESSOR, useExisting: FieldSelectComponent, multi: true},
+    {provide: NG_VALIDATORS, useExisting: FieldSelectComponent, multi: true}
   ]
 })
 export class FieldSelectComponent extends LabeledField implements OnInit, OnChanges, FieldSelectOptions {
@@ -54,10 +56,9 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
   _forceLoading: boolean;
   
   constructor(
-    @Self() @Optional() public ngControl: NgControl,
     protected injector: Injector
   ) {
-    super(ngControl, injector);
+    super(injector); 
   }
 
   ngOnInit() {
@@ -116,8 +117,8 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     }
   }
 
-  protected onChangeInputs(forceLoading: boolean, newValue?: any) {
-    this.loading = this._forceLoading = forceLoading;
+  protected onChangeInputs(newLoadingStatus: boolean, newValue?: any) {
+    this.loading = this._forceLoading = newLoadingStatus;
 
     let validationClosure = this.getValidationData(this);
 
@@ -188,8 +189,8 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     }
   }
 
-  protected getActualErrors() {
-    let errors = super.getActualErrors();
+  protected getDisplayErrors() {
+    let errors = super.getDisplayErrors();
     if (errors) {
       // loading is just here for making things invalid. no specific messages
       delete errors.loading;
