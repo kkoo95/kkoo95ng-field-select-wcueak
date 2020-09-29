@@ -90,7 +90,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
 
   readonly RANDOM_ID_PREFIX: string = 'pi-field-';
   
-  public ngControl: any;
+  public ngControl: NgControl;
 
   constructor(protected injector: Injector) {
     this.keyValueDiffers = this.injector.get(KeyValueDiffers);
@@ -145,10 +145,10 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     }
 
     this.internalControl.setValidators(this.createControlValidators());
-    this.ngControl.statusChanges.subscribe(_ => {
-      // console.log('internalControl.statusChanges', this.ngControl.errors, this.internalControl.errors)
-      // this.availableErrors = this.ngControl.errors;
-    })
+    // this.ngControl.statusChanges.subscribe(_ => {
+    //   // console.log('internalControl.statusChanges', this.ngControl.errors, this.internalControl.errors)
+    //   // this.availableErrors = this.ngControl.errors;
+    // })
     this.prepareMessages();
   }
 
@@ -170,14 +170,8 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     // we may skip the message part because it is based partly on pristine state. we'll have another (manual) shot bellow
     this.skipRefreshErrorDisplay = !markAsDirty;
     // any of these calls will call outer control validators and reset its status; and also cva watchers which will mark it as dirty...
-    if (value !== undefined) {
-      this.writeValue(value)
-      // this.internalControl.setValue(value);
-    }
-    else {
-      this.writeValue(this.fc.value);
-      // this.internalControl.updateValueAndValidity();
-    }
+
+    this.ngControl.control.setValue(value !== undefined ? value : this.ngControl.value, { emitViewToModelChange: false });
 
     this.skipRefreshErrorDisplay = false;
 
@@ -249,18 +243,22 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   registerOnChange(fn: (v:any) => void): void {
     this.internalControl.valueChanges.subscribe(v => fn(v));
   }
-
+ 
   registerOnTouched(fn: () => void): void {
     this.onTouched = fn;
   }
-
+ 
   writeValue(value: any): void { 
-    // emitEvent:true makes outer control dirty even at init (because fired right back up through OnChange handler)
-    this.internalControl.setValue(value, {emitEvent: false});
-    // needed because emitEvent:false (for field-messages and control-errors directives)
-    this.internalControl.setErrors(this.internalControl.errors);
+    // emitEvent:true makes outer control dirty (because fired right back up through OnChange handler).
+    // we don't want that here, especially at init)  
+    this.internalControl.setValue(value, {emitEvent: false}); 
+    // needed for control-errors directive because emitEvent:false  
+    // this.internalControl.setErrors(this.internalControl.errors);
+    // this.internalControl.hasError('')
+    // control-errors:ok messsages:ok 
+    // this.ngControl.control.updateValueAndValidity();
     this.internalControl.hasError('')
-  }
+  } 
 
   setDisabledState(isDisabled: boolean): void {
     isDisabled ? this.internalControl.disable({emitEvent: false}) : this.internalControl.enable({emitEvent: false});
@@ -294,6 +292,14 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     return false;
   }
 
+  /*
+  * call stack: outerControlDirective.updateValueAndValidity(opts)
+  *  &.setValue(v, opts)
+    *  updateControl(control, dir) // markAsDirty
+    *  cva.onChange(v) // pendingValue = v
+    *
+    * ngmodel._updateValuec // async
+  */
   validate(control: AbstractControl) {
     return this.internalControl.errors;//this.internalControl.validator ? this.internalControl.validator(control) : null;
   }
@@ -355,8 +361,8 @@ export class FieldMessages {
       this.translateMessages();
     }
     if (
-          // (changes.availableErrors && !changes.availableErrors.firstChange)
-          // || 
+          (changes.skip && !changes.skip.firstChange)
+          || 
           (changes.userMessages && !changes.userMessages.firstChange)) {
       this.refreshErrorDisplay();
     }
@@ -397,7 +403,7 @@ export class FieldMessages {
     if (ObjectUtils.isNotEmpty(errors)) {
       // our CSS requires a dirty state to display error indicator.
       // this.ngControl.control.markAsDirty();
-    }
+    } 
 
     this.errorMessages = this.buildErrorMessages(errors);
   }
