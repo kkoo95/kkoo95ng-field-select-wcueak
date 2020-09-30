@@ -37,7 +37,9 @@ export class FieldTextComponent extends LabeledField implements FieldTextOptions
       // if we can't build consistent id (random id is assigned),
       // turn off autocomplete functionality (we could have wrong suggestions)
       this.autocomplete = 'off';
-    } 
+    }
+
+    this.internalControl.setValidators(this.createControlValidators())
   }
    
   createControlValidators(): ValidatorFn {
