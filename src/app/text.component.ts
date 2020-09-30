@@ -23,6 +23,7 @@ export class FieldTextComponent extends LabeledField implements FieldTextOptions
   // FYI email input type native browser validation doesn't work in an angular app
   @Input() type: 'text' | 'password' | 'email' | 'search' = 'text';
   @Input() autocomplete: 'on' | 'off' | null;
+  @Input('tg') fdp: any;
 
   _maxlength: string;
   _polyMaxlength: number;
@@ -40,6 +41,10 @@ export class FieldTextComponent extends LabeledField implements FieldTextOptions
     }
 
     this.internalControl.setValidators(this.createControlValidators())
+  }
+
+  ngOnChanges(changes) {
+    super.ngOnChanges(changes);
   }
    
   createControlValidators(): ValidatorFn {

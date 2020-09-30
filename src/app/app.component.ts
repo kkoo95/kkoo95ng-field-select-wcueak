@@ -1,5 +1,5 @@
 import { Component, VERSION, Directive, ElementRef, ViewChild } from '@angular/core';
-import { FormControl, ControlValueAccessor, NG_VALUE_ACCESSOR, NgModel } from '@angular/forms';
+import { FormControl, ControlValueAccessor, NG_VALUE_ACCESSOR, NgModel, Validators, FormBuilder, FormGroup } from '@angular/forms';
 import { of, EMPTY, interval, timer } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { debounceTime, timeInterval, timeout, flatMap, delay } from 'rxjs/operators';
@@ -21,19 +21,34 @@ export class AppComponent  {
   multiple = false;
   hide = false;
   data1Mode = true;
-  data: any = !this.multiple ? 29 : [29];
+  _data: any = !this.multiple ? 29 : [29];
 
   @ViewChild('dataModelDir', {static: true}) dataModel: NgModel; 
 
   status;
   pristine;
-  
-  constructor(protected http: HttpClient) {}  
+
+  fc = new FormControl(2, Validators.required);
+  fg = new FormGroup({ data: this.fc });
+
+  constructor(protected http: HttpClient) {
+    
+  }
+
+  get data() {
+    // return this._data;
+    return this.fc.value;
+  }
+
+  set data(v) {
+    // this._data = v;
+    this.fc.setValue(v);
+  }
 
   ngOnInit() {
     this.data = {};
     this.data = 0;
-    this.dataModel.statusChanges.subscribe(_ => {
+    this.dataModel?.statusChanges.subscribe(_ => {
       this.status = JSON.stringify(this.dataModel.errors)
       this.pristine = this.dataModel.pristine
     })
@@ -45,14 +60,14 @@ export class AppComponent  {
   }
 
   get dataModelStatus() {
-    return JSON.stringify(this.dataModel.errors);
+    return JSON.stringify(this.dataModel?.errors);
   }
 
   reload() {
     this.loading = true;
 
     // this.http.get('https://cors-anywhere.herokuapp.com/https://dummy.restapiexample.com/api/v1/employees')
-    // this.http.get('https://jsonplaceholder.typicode.com/users')   
+    // this.http.get('https://jsonplaceholder.typicode.com/users')    
     of([...json])
       .pipe(
         delay(1000)

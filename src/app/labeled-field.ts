@@ -31,6 +31,8 @@ export type ValidationResult = null | any;
 export type ValidationResultFn = (control: AbstractControl) => ValidationResult;
 export type PiControlValidators = { [x: string]: ValidationResult | ValidationResultFn } | ValidatorFn | ValidatorFn[];
  
+export const resolvedPromise = Promise.resolve();
+
 @Directive({selector: 'ng-template[piFieldLabel]'})
 export class LabeledFieldLabel {
   constructor(public templateRef: TemplateRef<any>) {}
@@ -107,7 +109,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     }
   }
 
-  unsub;
+  unsub = new Subscription();
   displayErrors
 
   ngOnInit(): void {
@@ -131,7 +133,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   // covering the case where field is already invalid at init.
   // 1. must tweak dirty state to let our css do its job
   protected handleErrorState() {
-      this.unsub = this.ngControl.statusChanges.subscribe(() => {
+    const refreshErrorState = () => {
         this.displayErrors = this.getActualErrors();
 
         // known bug: 2 calls to ngControl.control.setValue() (meaning not from UI) need to be made in order
@@ -142,14 +144,29 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
           // our CSS requires a dirty state to display error indicator.
           this.ngControl.control.markAsDirty({onlySelf: true});
         }
+    }
+    const subscribe = () => {
+      this.unsub.add(this.ngControl.statusChanges.subscribe(refreshErrorState))
+    }
+
+    // this is the case when ngControl is a FormControlName
+    if (!this.ngControl.statusChanges) {
+      resolvedPromise.then(() => {
+        subscribe();
+        // since we waited for next cycle, we missed the initial state refresh
+        refreshErrorState();
       })
+    }
+    else {
+      subscribe();
+    }
   }
 
   protected getActualErrors() {
     return {...this.ngControl.errors};
   }
 
-  // update outer control's value without marking it as dirty
+  // update outer control's value without marking it as dirty  
   protected updateValue(value?: any) {
     if (this.ngControl) {
         this.ngControl.control.setValue(value !== undefined ? value : this.ngControl.value, { emitViewToModelChange: false });
@@ -157,7 +174,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   }
 
   ngOnDestroy() {
-    this.unsub?.unsubscribe();
+    this.unsub.unsubscribe();
     if (this.ngControl) {
       // there is a memory leak when combining formControl and ngIf: CVA is not unlinked properly when directive is destroyed.
       // see https://github.com/angular/angular/pull/37566

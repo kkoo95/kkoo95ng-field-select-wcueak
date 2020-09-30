@@ -7,19 +7,42 @@
 <button class="btn btn-secondary" (click)="data = items[items.length - 1].id">set last</button>
  
 <div>
-  <nav>
-    <!-- <span class="d-inline-block mr-2">{{'status:' + dataModelStatus}}</span> -->        
+  <nav>    
+    <span class="d-inline-block mr-2">{{'status:' + status}}</span>
+    <span>{{'dirty:' + fc.dirty}}</span>
+    <button type="button" (click)="fc.markAsPristine()">reset</button>
+  </nav> 
+  <hr> 
+  <button (click)="reload()">Reload</button><br>
+  <form [formGroup]="fg">
+    <app-text  label="data" [tg]="'kik'" [formControlName]="'data'" full ></app-text>
+  </form>
+</div>    
+
+<!-- <div>
+  <nav>    
     <span class="d-inline-block mr-2">{{'status:' + status}}</span>
     <span>{{'dirty:' + dataModelDir.dirty}}</span>
     <button type="button" (click)="dataModelDir.control.markAsPristine()">reset</button>
   </nav>
   <hr> 
   <button (click)="reload()">Reload</button><br>
-  <!-- <app-select required [multiple]="multiple" [allowInvalid]="false" full label="data" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" #dataModelDir="ngModel"></app-select> -->
-  <app-text  label="data" [(ngModel)]="data" #dataModelDir="ngModel" required full ></app-text>
-  <!-- <input [(ngModel)]="data" required #dataModelDir="ngModel"> -->  
-</div>      
-   
+  <app-select required [multiple]="multiple" [allowInvalid]="false" full label="data" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" #dataModelDir="ngModel"></app-select>
+  <!-- <app-text  label="data" [tg]="'kik'" [(ngModel)]="data" #dataModelDir="ngModel" required full ></app-text> ->
+</div>-->
+ 
+<!-- <div>
+  <nav>      
+    <span class="d-inline-block mr-2">{{'status:' + status}}</span>
+    <span>{{'dirty:' + dataModelDir.dirty}}</span>
+    <button type="button" (click)="dataModelDir.control.markAsPristine()">reset</button>
+  </nav>
+  <hr> 
+  <button (click)="reload()">Reload</button><br>
+  <app-select required [multiple]="multiple" [allowInvalid]="false" full label="data" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" #dataModelDir="ngModel"></app-select>
+</div>     -->
+ 
+
 <!-- <div class="form-row"> 
 <div class="col-auto"><label>mode:<input class="form-control" [ngModel]="data1Mode" name="data1Mode" (ngModelChange)="changeMode($event)" type="checkbox"></label></div>    
 <div class="col-auto"><button class="btn btn-secondary" (click)="data1.setValue({})">reset</button></div>
@@ -40,4 +63,6 @@
   <field-plain *ngIf="data1Mode" id="data" [(ngModel)]="data" bindLabel="name" full></field-plain>
 </div>
 </div> -->
+
+<!-- <input [(ngModel)]="data" required #dataModelDir="ngModel">   -->
  

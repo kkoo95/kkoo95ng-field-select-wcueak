@@ -1,10 +1,8 @@
 import { Component, EventEmitter, Injector, Input, OnChanges, OnInit, Optional, Output, Self, SimpleChanges, TemplateRef } from "@angular/core";
 import { NgControl, NG_VALIDATORS,  NG_VALUE_ACCESSOR,    ValidationErrors, ValidatorFn } from '@angular/forms';
-import { LabeledField, LabeledFieldOptions } from './labeled-field';
+import { LabeledField, LabeledFieldOptions, resolvedPromise } from './labeled-field';
 import { ArrayUtils } from "./array-utils";
 import { ObjectUtils } from "./object-utils";
-
-const resolvedPromise = Promise.resolve();
 
 export type FieldSelectOptions = {
   items?: any[];
