@@ -37,16 +37,19 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
   @Input() bindValue: string;
   @Input() bindLabel: string;
   @Input() compareWith: (a: any, b: any) => boolean;
-  @Input() multiple = false;
-  // @Input() maxSelectedItems: 'none' | number = 'none';
+  @Input() multiple;
+  @Input() maxSelectedItems: 'none' | number = 'none';
   @Input() clearable: boolean = true;
   @Input() searchFn: (term: string, item: any) => boolean;
-  @Input() autoDefaultValue = false;
   /**
-   * ngselect default behavior is somewhat true: it renders empty but models remain unchanged.
-   * our default is false, but we are only supporting this on single value selection
+   * If true, when field value cannot be found in items, no attempt will be made to still pick a value from them.
+   * When false, the first item, if available, will be selected. Defaults to required state
    */
-  @Input() allowInvalid: boolean = false;
+  @Input() allowInvalid: boolean;
+  /**
+   * If true (default) and items only contains one item, the value will be automatically changed to that one.
+   */
+  @Input() autoDefaultValue = true;
   @Input() loading;
   @Input() confirmChange: (value: any) => boolean | Promise<boolean>;
   @Input() labelTemplate: TemplateRef<any>;
@@ -55,7 +58,8 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
   @Output() clear = new EventEmitter();
 
   // helps turning one loading state at initialisation if no explicit loading value is provided
-  _forceLoading: boolean;
+  protected initializing = true;
+  _forcedLoading = false;
 
   ngOnInit() {
     super.ngOnInit();
@@ -69,20 +73,17 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     if (this.hideSelected === undefined) {
       this.hideSelected = this.multiple;
     }
+    if (this.allowInvalid === undefined) {
+      this.allowInvalid = !required;
+    }
 
     this.setupControlValidators();
-
-    // trying to be nice here by forcing loading status if it hasn't been explicitly set and items are not there yet.
-    // this is to avoid unexpected rendering at init
-    let forcedLoadingStatus = this.loading === true
-      || (this.loading !== false && (!this.items || (this.items.length == 0 && required)))
-
-    this.onChangeInputs(forcedLoadingStatus);
+    this.initializing = false;
   }
 
   setupControlValidators() {
     this.internalControl.setValidators(control => {
-      if (this.loading || this._forceLoading) {
+      if (this.loading) {
         return {loading: true};
       }
       else {
@@ -100,32 +101,57 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     })
   }
 
+  protected handleErrorState() {
+    // need to syncronize this handler installation with next cycle like in onChangeInputs
+    resolvedPromise.then(() => {
+      super.handleErrorState();
+    })
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     super.ngOnChanges(changes);
-    let isFirstChangeEver =  changes.label?.firstChange || changes.items?.firstChange || changes.bindValue?.firstChange;
 
-    // first change is handled in init method
-    if (!isFirstChangeEver) {
-      if (['loading', 'items', 'bindValue', 'compareWith', 'allowInvalid', 'multiple', 'autoDefaultValue'].some(p => p in changes)) {
-        let updateValidity = ('loading' in changes) || this._forceLoading;
-        let newLoadingStatus = this._forceLoading ? false : this.loading;
-        let newValue = this.figureNewValue(newLoadingStatus);
-        let sameValue = newValue === this.fc.value
+    if (['loading', 'items', 'bindValue', 'compareWith', 'allowInvalid', 'multiple', 'autoDefaultValue'].some(p => p in changes)) {
+      let forceLoadingAtInit = this.shouldForceLoadingAtInit();
+      let newLoadingStatus = this.loading
+      let validityChanged = 'loading' in changes;
 
-        if (!sameValue || updateValidity) {
-          this.onChangeInputs(newLoadingStatus, sameValue ? undefined : newValue);
-        }
+      if (forceLoadingAtInit) {
+        newLoadingStatus = true;
+        validityChanged = true;
+      }
+      else if (this._forcedLoading) {
+        newLoadingStatus = false; 
+        validityChanged = true;
+      } 
+
+      let newValue = this.figureNewValue(newLoadingStatus);
+      let valueChanged = newValue !== this.fc.value
+
+      if (validityChanged || valueChanged) {
+        this.onChangeInputs(newLoadingStatus, valueChanged ? newValue : undefined);
       }
     }
   }
 
-  protected onChangeInputs(newLoadingStatus: boolean, newValue?: any) {
-    this.loading = this._forceLoading = newLoadingStatus;
+  // trying to be nice here by forcing loading status if it hasn't been explicitly set at init and also items are not there yet.        
+  // this is to avoid unexpected rendering at init
+  protected shouldForceLoadingAtInit() {
+    let force = false;
+    if (this.initializing && this.loading === undefined) {
+      force = !this.items || (this.items.length == 0 && this.isRequired());
+    }
+    return force;
+  }
 
-    // must saved component state to reuse it the next cycle  
+  protected onChangeInputs(newLoadingStatus: boolean, newValue?: any) {
+    this.loading = this._forcedLoading = newLoadingStatus;
+
+    // must saved component state to reuse it in the next cycle  
     let validationClosure = this.getValidationData(this);
 
-    //  forcing an additional change detection run when inputs have effective impacts on selected value or loading status
+    // forcing an additional change detection run when inputs have effective impacts on selected value or loading status
+    // to avoid ECAIHBCError
     resolvedPromise.then(() => {
       let savedValidationData = this.getValidationData(this);
 
@@ -176,13 +202,19 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
    }
   }
 
-  protected getValidationData({ items, bindValue, compareWith, multiple, loading, _forceLoading }: FieldSelectComponent): Partial<FieldSelectComponent> {
-    return { items, bindValue, compareWith, multiple, loading, _forceLoading }
+  protected getValidationData({ items, bindValue, compareWith, multiple, loading, _forcedLoading }: FieldSelectComponent): Partial<FieldSelectComponent> {
+    return { items, bindValue, compareWith, multiple, loading, _forcedLoading }
   }
 
   protected applyValidationData(data: Partial<FieldSelectComponent>, target: any) {
-    let keys: FieldSelectOptionKeys[] = ['items', 'bindValue', 'compareWith', 'multiple', 'loading', '_forceLoading']
+    let keys: FieldSelectOptionKeys[] = ['items', 'bindValue', 'compareWith', 'multiple', 'loading', '_forcedLoading']
     keys.forEach((k: string) => target[k] = data[k]);
+  }
+
+  protected getActualErrors() {
+    let err = super.getActualErrors();
+    delete err.loading;
+    return err;
   }
 
   protected getBoundValue(value: any): any {

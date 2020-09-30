@@ -23,12 +23,12 @@ export class AppComponent  {
   data1Mode = true;
   data: any = !this.multiple ? 29 : [29];
 
-  @ViewChild('dataModelDir', {static: true}) dataModel: NgModel;
+  @ViewChild('dataModelDir', {static: true}) dataModel: NgModel; 
 
   status;
   pristine;
   
-  constructor(protected http: HttpClient) {}
+  constructor(protected http: HttpClient) {}  
 
   ngOnInit() {
     this.data = {};
