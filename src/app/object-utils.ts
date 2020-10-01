@@ -84,7 +84,7 @@ export class ObjectUtils {
       let keys: string[] = path.split('.');
       let val = obj;
 
-      for (let k in keys) {
+      for (let k of keys) {
         if (val == null) {
           break;
         }

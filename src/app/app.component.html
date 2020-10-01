@@ -15,11 +15,11 @@
   <hr> 
   <button (click)="reload()">Reload</button><br>
   <form [formGroup]="fg">
-    <app-text  label="data" [tg]="'kik'" [formControlName]="'data'" full ></app-text>
+    <app-text label="fc" [formControlName]="'data1'" full></app-text>
   </form>
 </div>    
 
-<!-- <div>
+<!-- <div> 
   <nav>    
     <span class="d-inline-block mr-2">{{'status:' + status}}</span>
     <span>{{'dirty:' + dataModelDir.dirty}}</span>

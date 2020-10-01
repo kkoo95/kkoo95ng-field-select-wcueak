@@ -80,6 +80,8 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   @ContentChild(LabeledFieldLabel) labelTpl: LabeledFieldLabel;
 
   internalControl: AbstractControl = new LabeledFormControl();
+  displayErrors: ValidationErrors;
+  messages: MessageRegistry;
   onTouched: Function;
 
   protected _options: LabeledFieldOptions;
@@ -87,16 +89,19 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   protected optionsKeyValueDiffer: KeyValueDiffer<string, any>;
   protected cdr: ChangeDetectorRef;
   protected ngControl: NgControl;
+  protected unsub = new Subscription();
+  protected defaultMessages: MessageRegistry = {
+    required: 'Required',
+    empty: 'Empty!',
+    field_binding: '[field]binding',
+    field_exists: '[field]exists',
+  }
 
   readonly RANDOM_ID_PREFIX: string = 'pi-field-';
 
   constructor(protected injector: Injector) {
     this.keyValueDiffers = this.injector.get(KeyValueDiffers);
     this.cdr = this.injector.get(ChangeDetectorRef);
-  }
-
-  get fc() {
-    return this.internalControl as FormControl;
   }
 
   @Input()
@@ -109,72 +114,27 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     }
   }
 
-  unsub = new Subscription();
-  displayErrors
-
   ngOnInit(): void {
     this.ngControl = this.injector.get(NgControl, null, InjectFlags.SkipSelf | InjectFlags.Optional);
 
     if (this.ngControl) {
       /* Try to assign same id each time field is initialized
-         in order to have correct autocomplete suggestions */      
+         in order to have correct autocomplete suggestions */
       if (!this.id && this.ngControl.name) {
         this.id = String(this.ngControl.name);
       } else if(!this.id) {
         this.id = this.RANDOM_ID_PREFIX + ++uid;
       }
-
+      this.internalControl['__debug'] = this.id;
       this.handleErrorState();
     }
 
     this.prepareMessages();
   }
 
-  // covering the case where field is already invalid at init.
-  // 1. must tweak dirty state to let our css do its job
-  protected handleErrorState() {
-    const refreshErrorState = () => {
-        this.displayErrors = this.getActualErrors();
-
-        // known bug: 2 calls to ngControl.control.setValue() (meaning not from UI) need to be made in order
-        // to actually display error messages
-        if (this.ngControl.control.pristine && ObjectUtils.isNotEmpty(this.displayErrors)) {
-          // remove errors we don't want there messages being displayed at init
-          this.displayErrors = {};
-          // our CSS requires a dirty state to display error indicator.
-          this.ngControl.control.markAsDirty({onlySelf: true});
-        }
-    }
-    const subscribe = () => {
-      this.unsub.add(this.ngControl.statusChanges.subscribe(refreshErrorState))
-    }
-
-    // this is the case when ngControl is a FormControlName
-    if (!this.ngControl.statusChanges) {
-      resolvedPromise.then(() => {
-        subscribe();
-        // since we waited for next cycle, we missed the initial state refresh
-        refreshErrorState();
-      })
-    }
-    else {
-      subscribe();
-    }
-  }
-
-  protected getActualErrors() {
-    return {...this.ngControl.errors};
-  }
-
-  // update outer control's value without marking it as dirty  
-  protected updateValue(value?: any) {
-    if (this.ngControl) {
-        this.ngControl.control.setValue(value !== undefined ? value : this.ngControl.value, { emitViewToModelChange: false });
-    }
-  }
-
   ngOnDestroy() {
     this.unsub.unsubscribe();
+
     if (this.ngControl) {
       // there is a memory leak when combining formControl and ngIf: CVA is not unlinked properly when directive is destroyed.
       // see https://github.com/angular/angular/pull/37566
@@ -207,46 +167,113 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
         });
         this.ngOnChanges(changes);
         this.cdr.markForCheck();
-      } 
+      }
     }
   }
 
-  protected safeTranslate(key: string) {
-    return '$$'+key;
-  }
-
-  protected prepareMessages(): MessageRegistry {
-    if (this.userMessages == null) {
-      // means user don't want nothing
-      return {};
+  protected prepareMessages() {
+    if (this.userMessages === null) {
+      // if and only if null, it means user don't want nothing
+      this.messages = {};
     } else {
-      this.userMessages = {
-        required: 'Required',
-        empty: 'Empty!',
-        field_binding: '[field]binding',
-        field_exists: '[field]exists',
+      this.messages = {
+        ...this.defaultMessages,
         ...this.userMessages
       }
-      return this.userMessages;  
-    } 
+    }
   }
 
   registerOnChange(fn: (v:any) => void): void {
     this.internalControl.valueChanges.subscribe(v => fn(v));
   }
- 
+
   registerOnTouched(fn: () => void): void {
     this.onTouched = fn;
   }
- 
-  writeValue(value: any): void { 
+
+  writeValue(value: any): void {
     // emitEvent:true makes outer control dirty (because fired right back up through OnChange handler).
-    // we don't want that here, especially at init)  
+    // we don't want that here, especially at init)
     this.internalControl.setValue(value, {emitEvent: false});
-  } 
+  }
+
+  // covering the case where field is already invalid at init:
+  // 1. must tweak dirty state to let our css do its job (red border)
+  // 2. empty error messages
+  protected handleErrorState() {
+    const refreshErrorState = () => {
+      this.displayErrors = this.getDisplayErrors();
+/*
+      // known bug: 2 calls to ngControl.control.setValue() (meaning not from UI) need to be made in order
+      // to actually display error messages
+      if (this.ngControl.control.pristine && ObjectUtils.isNotEmpty(this.displayErrors)) {
+        // remove errors we don't want there messages being displayed at init
+        this.displayErrors = {};
+        // our CSS requires a dirty state to display error indicator.
+        this.ngControl.control.markAsDirty({onlySelf: true});
+      }
+     */
+
+      if (this.ngControl.control.pristine) {
+        // remove errors we don't want there messages being displayed at init
+        delete this.displayErrors.required
+
+        if (ObjectUtils.isNotEmpty(this.displayErrors)) {
+          this.displayErrors = {};
+          // our CSS requires a dirty state to display error indicator.
+          this.ngControl.control.markAsDirty({onlySelf: true});
+        }
+      }
+
+      // if (this.ngControl.control.pristine) {
+      //   // remove errors we don't want there messages being displayed at init
+      //   this.displayErrors = {};
+      //   this.ngControl.control.markAsDirty({onlySelf: true});
+      // }
+    }
+    const subscribe = () => {
+      this.unsub.add(this.ngControl.statusChanges.subscribe(refreshErrorState))
+    }
+
+    // this is the case when ngControl is a FormControlName
+    if (!this.ngControl.statusChanges) {
+      resolvedPromise.then(() => {
+        subscribe();
+        // since we waited for next cycle, we missed the initial state refresh
+        refreshErrorState();
+      })
+    }
+    else {
+      subscribe();
+    }
+  }
+
+  protected getDisplayErrors() {
+    return {...this.ngControl.errors};
+  }
+
+  /** updates outer control's value and/or status without marking it as dirty **/
+  protected updateControl(value: any) {
+    if (this.ngControl) {
+      const { control } = this.ngControl;
+
+      if (value == undefined) {
+        // just refresh status of outer control...
+        let ctrl = this.internalControl;
+        // ... but refresh local errors first because that's how our validate() works
+        let internalErrors = ctrl.validator ? ctrl.validator(ctrl) : null;
+        this.internalControl.setErrors(internalErrors);
+        let errors = control.validator ? control.validator(control) : null;
+        control.setErrors(errors);
+      }
+      else {
+        control.setValue(value, { emitViewToModelChange: false });
+      }
+    }
+  }
 
   setDisabledState(isDisabled: boolean): void {
-    isDisabled ? this.internalControl.disable({emitEvent: false}) : this.internalControl.enable({emitEvent: false});
+    this.internalControl[isDisabled ? 'disable' : 'enable'].call(this.internalControl,  {emitEvent: false});
   }
 
   @HostBinding('class.disabled')
@@ -272,13 +299,21 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   /*
   * call stack: outerControlDirective.updateValueAndValidity(opts)
   *  &.setValue(v, opts)
-    *  updateControl(control, dir) // markAsDirty
-    *  cva.onChange(v) // pendingValue = v
-    *
-    * ngmodel._updateValuec // async
+  *   - updateControl(control, dir) // markAsDirty
+  *   - cva.onChange(v) // pendingValue = v
+  *
+  *   - ngmodel._updateValuec // async
   */
   validate(_clearChangeFns: AbstractControl) {
     return this.internalControl.errors;
+  }
+
+  protected safeTranslate(key: string) {
+    return key;
+  }
+
+  get fc() {
+    return this.internalControl as FormControl;
   }
 }
 
@@ -299,67 +334,6 @@ export class TemplatedFieldLabel {
 }
 
 
-@Component({
-  selector: 'field-messages',
-  template: `
-    <div class="error-label" *ngFor="let err of errorMessages">{{err}}</div>
-  `
-})
-export class FieldMessages {
-  errorMessages: string[];
-
-  @Input() errors: {};
-  @Input() messages: MessageRegistry = {};
-  @Input() skip: boolean;
-
-  protected translatedMessages: MessageRegistry;
-
-  ngOnInit(): void {
-    this.translateMessages();
-    if (this.errorMessages == null) { 
-      this.refreshErrorMessages();
-    } 
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes.messages && !changes.messages.firstChange) {
-      this.translateMessages();
-    }
-    if ((changes.errors && !changes.errors.firstChange)
-          || (changes.messages && !changes.messages.firstChange)
-          || (changes.skip && !changes.skip.firstChange)) {
-      this.refreshErrorMessages();
-    }
-  }
-
-  protected translateMessages() {
-    this.translatedMessages = {};
-
-    Object.entries(this.messages)
-      .forEach(([errorKey, messageKey]) => this.translatedMessages[errorKey] = this.safeTranslate(messageKey));
-  }
-
-  protected refreshErrorMessages() {
-    let effectiveMessages: string[];
-    let translated = this.translatedMessages;
-
-    if (this.errors == null || this.skip) {
-      effectiveMessages = []
-    }
-    else {
-      effectiveMessages = Object.keys(translated)
-        .filter(k => ObjectUtils.resolveNested(this.errors, k) != null)
-        .map(k => translated[k]);
-      effectiveMessages = Object.keys(this.errors).map((e, i, arr) => translated[e] || arr[i]);
-    }
-
-    this.errorMessages = effectiveMessages;
-  };
-  
-  protected safeTranslate(key: string) {
-    return '$'+key;
-  }
-}
 
 function cleanUpControl(control /* FormControl */, dir/* NgControl*/) {
   function _noControlError(dir) {

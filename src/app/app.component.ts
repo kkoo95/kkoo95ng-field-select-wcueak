@@ -29,7 +29,7 @@ export class AppComponent  {
   pristine;
 
   fc = new FormControl(2, Validators.required);
-  fg = new FormGroup({ data: this.fc });
+  fg = new FormGroup({ data1: this.fc });
 
   constructor(protected http: HttpClient) {
     
@@ -48,10 +48,20 @@ export class AppComponent  {
   ngOnInit() {
     this.data = {};
     this.data = 0;
-    this.dataModel?.statusChanges.subscribe(_ => {
-      this.status = JSON.stringify(this.dataModel.errors)
-      this.pristine = this.dataModel.pristine
-    })
+
+    this.fc.valueChanges.subscribe(v => console.log(' fc.statusChanges', v));
+    this.fc.statusChanges.subscribe(_ => console.log(' fc.statusChanges', this.fc.errors));
+    this.fg.valueChanges.subscribe(v => console.log('  fg.statusChanges', v));
+    this.fc.statusChanges.subscribe(_ => console.log('  fg.statusChanges', this.fc.status));
+      
+    if (this.dataModel) {
+      this.dataModel.valueChanges.subscribe(v => console.log('dataModel.statusChanges', v));
+      this.dataModel.statusChanges.subscribe(_ => {
+        console.log('dataModel.statusChanges', this.dataModel.status, this.dataModel.errors)
+        this.status = JSON.stringify(this.dataModel.errors)
+        this.pristine = this.dataModel.pristine
+      })
+    }
     of(EMPTY).subscribe(_ => this.rule = '[ \\d]')
     this.reload();
   }

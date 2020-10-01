@@ -76,13 +76,14 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     }
 
     this.setupControlValidators();
+
     this.initializing = false;
   }
 
   setupControlValidators() {
     this.internalControl.setValidators(control => {
       if (this.loading) {
-        return {loading: true};
+        return { loading: true };
       }
       else {
         let { value } = control;
@@ -91,7 +92,7 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
         if (valueArr && valueArr.length > 0) {
           let intersection = this.intersectWithItems(valueArr);
           if (intersection?.length != valueArr.length) {
-            return {field_exists: true};
+            return { field_exists: true };
           }
         }
         return null;
@@ -101,9 +102,9 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
 
   protected handleErrorState() {
     // need to syncronize this handler installation with next cycle like in onChangeInputs
-    resolvedPromise.then(() => {
+    // resolvedPromise.then(() => {
       super.handleErrorState();
-    })
+    // })
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -111,50 +112,45 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
 
     if (['loading', 'items', 'bindValue', 'compareWith', 'allowInvalid', 'multiple', 'autoDefaultValue'].some(p => p in changes)) {
       let forceLoadingAtInit = this.shouldForceLoadingAtInit();
-      let newLoadingStatus = this.loading
-      let validityChanged = 'loading' in changes;
+      let newLoadingStatus = this.loading;
+      let validityChanged = Boolean(changes.loading?.previousValue) != Boolean(changes.loading?.currentValue);
 
       if (forceLoadingAtInit) {
+        this._forcedLoading = true;
         newLoadingStatus = true;
         validityChanged = true;
       }
       else if (this._forcedLoading) {
-        newLoadingStatus = false; 
+        this._forcedLoading = false;
+        newLoadingStatus = false;
         validityChanged = true;
-      } 
+      }
+      if (validityChanged) {
+        this.loading = newLoadingStatus;
+      }
 
-      let newValue = this.figureNewValue(newLoadingStatus);
-      let valueChanged = newValue !== this.fc.value
+      if (!this.initializing) {
+        let newValue = this.figureNewValue(newLoadingStatus);
+        let valueChanged = newValue !== this.fc.value
 
-      if (validityChanged || valueChanged) {
-        this.onChangeInputs(newLoadingStatus, valueChanged ? newValue : undefined);
+        if (validityChanged || valueChanged) {
+          this.onChangeInputs(newValue);
+        }
       }
     }
   }
 
-  // trying to be nice here by forcing loading status if it hasn't been explicitly set at init and also items are not there yet.        
-  // this is to avoid unexpected rendering at init
-  protected shouldForceLoadingAtInit() {
-    let force = false;
-    if (this.initializing && this.loading === undefined) {
-      force = !this.items || (this.items.length == 0 && this.isRequired());
-    }
-    return force;
-  }
+  protected onChangeInputs(newValue: any) {
+    // must saved component state to reuse during next cycle
+    let validationDataClosure = this.getValidationData(this);
 
-  protected onChangeInputs(newLoadingStatus: boolean, newValue?: any) {
-    this.loading = this._forcedLoading = newLoadingStatus;
-
-    // must saved component state to reuse it in the next cycle  
-    let validationClosure = this.getValidationData(this);
-
-    // forcing an additional change detection run when inputs have effective impacts on selected value or loading status
-    // to avoid ECAIHBCError
+    // forcing an additional change detection run when inputs have effective impacts on selected value or
+    // loading status to avoid ECAIHBCError
     resolvedPromise.then(() => {
       let savedValidationData = this.getValidationData(this);
 
-      this.applyValidationData(validationClosure, this);
-      this.updateValue(newValue);
+      this.applyValidationData(validationDataClosure, this);
+      this.updateControl(newValue !== this.fc.value ? newValue : undefined);
       this.applyValidationData(savedValidationData, this);
     });
   }
@@ -197,11 +193,11 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     else {
       let boundItems = this.items == null ? null : this.items.map(e => this.getBoundValue(e))
       return ArrayUtils.intersection(boundItems, arr);
-   }
+    }
   }
 
-  protected getValidationData({ items, bindValue, compareWith, multiple, loading, _forcedLoading }: FieldSelectComponent): Partial<FieldSelectComponent> {
-    return { items, bindValue, compareWith, multiple, loading, _forcedLoading }
+  protected getValidationData({ items, bindValue, compareWith, multiple, loading, _forcedLoading  }: FieldSelectComponent): Partial<FieldSelectComponent> {
+    return { items, bindValue, compareWith, multiple, loading, _forcedLoading  }
   }
 
   protected applyValidationData(data: Partial<FieldSelectComponent>, target: any) {
@@ -209,8 +205,19 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     keys.forEach((k: string) => target[k] = data[k]);
   }
 
-  protected getActualErrors() {
-    let err = super.getActualErrors();
+  // Trying to be nice here by forcing loading status if it hasn't been explicitly set at init and also items
+  // are not there yet. This is to avoid unexpected rendering at init
+  protected shouldForceLoadingAtInit() {
+    let force = false;
+    if (this.initializing && this.loading === undefined) {
+      force = !this.items || (this.items.length == 0 && this.isRequired());
+    }
+    return force;
+  }
+
+  protected getDisplayErrors() {
+    let err = super.getDisplayErrors();
+    // ignore loading error messages (if any)
     delete err.loading;
     return err;
   }
