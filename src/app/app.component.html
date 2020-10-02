@@ -4,18 +4,20 @@
   <label>shuffle<input type="checkbox" [(ngModel)]="shuffle"></label>
   <button class="btn btn-secondary" (click)="slice(0,0)">empty</button>
   <button class="btn btn-secondary" (click)="reload()">reload</button>
-  <button class="btn btn-secondary" (click)="data = 7; reload()">set 7 & Reload</button>
-  <button class="btn btn-secondary" (click)="data = 9; reload()">set 9 & Reload</button>
-  <button class="btn btn-secondary" (click)="data = 7; slice(0, maxItem)">set 7 & [0-max]</button>
-  <button class="btn btn-secondary" (click)="maxItem = 8; slice(0, 8); data = items[7].id">reset</button>
+  <button class="btn btn-secondary" (click)="setValue(7); reload()">set 7 & Reload</button>
+  <button class="btn btn-secondary" (click)="setValue(9); reload()">set 9 & Reload</button>
+  <button class="btn btn-secondary" (click)="setValue(7); slice(0, maxItem)">set 7 & [0-max]</button>
+  <button class="btn btn-secondary" (click)="maxItem = 8; slice(0, 8); setValue(items[7].id)">reset</button>
 </nav>
-<hr>
-<label *ngIf="multiple">data: {{data}}</label>
 </div>
 
+<hr>
+<div><label><input type="checkbox" [(ngModel)]="show1"> show datamodel</label></div>
+<ng-container *ngIf="show1">
 <nav class="btn-group btn-group-sm mb-2">
   <label *ngIf="!multiple">dataModel: <input [(ngModel)]="data" type="number" [ngModelOptions]="{updateOn: 'blur'}"></label>
-  <button class="btn btn-dark" (click)="data = 0">empty value</button>
+  <button class="btn btn-dark" (click)="data = null">null</button>
+  <button class="btn btn-dark" (click)="data = 0">0</button>
   <button class="btn btn-dark" (click)="data = items[0].id">set first</button>
   <button class="btn btn-dark" (click)="data = items[items.length - 1].id">set last</button>
 </nav>
@@ -29,12 +31,16 @@
     <app-select [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading" required full #dataModelDir="ngModel"></app-select>
   </div>
 </div>
+</ng-container>
 
 <hr>
+<div><label><input type="checkbox" [(ngModel)]="show2"> show fc</label></div>
+<ng-container *ngIf="show2">
 <nav class="btn-group btn-group-sm mb-2">
-  <!-- <label *ngIf="!multiple">fc: <input [ngModel]="fc.value" (ngModelChange)="fc.setValue($event)" type="number" [ngModelOptions]="{updateOn: 'blur'}"></label> -->
-  <span>fc: {{fc.value}}</span>
-  <button class="btn btn-dark" (click)="fc.setValue(0)">empty value</button>
+  <label *ngIf="!multiple">fc: <input [ngModel]="fc.value" (ngModelChange)="fc.setValue($event, {emitEvent: true})" type="number" [ngModelOptions]="{updateOn: 'blur'}"></label>
+  <div class="mr-2">({{fc.value}})</div>
+  <button class="btn btn-dark" (click)="fc.setValue(null)">null</button>
+  <button class="btn btn-dark" (click)="fc.setValue(0)">0</button>
   <button class="btn btn-dark" (click)="fc.setValue(items[0].id)">set first</button>
   <button class="btn btn-dark" (click)="fc.setValue(items[items.length - 1].id)">set last</button>
 </nav>
@@ -45,9 +51,10 @@
 </nav>    
 <div class="row">
   <div class="col-6">
-    <app-select [items]="items" [formControl]="fc" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading"></app-select>
-    <!-- <form [formGroup]="fg"><app-select [items]="items" [formControlName]="'data1'" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading"></app-select></form>  -->
+    <!-- <app-select [items]="items" [formControl]="fc" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading"></app-select> -->
+    <form [formGroup]="fg"><app-select [items]="items" [formControlName]="'data1'" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading"></app-select></form> 
     <!-- <form [formGroup]="fg"><app-text [formControlName]="'data1'"></app-text></form> -->
   </div>
 </div>
-              
+</ng-container>
+          

@@ -186,7 +186,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   onChange
   registerOnChange(fn: (v:any) => void): void {
     this.onChange = fn;
-    this.internalControl.valueChanges.subscribe(v => fn(v));
+    this.internalControl.valueChanges.subscribe(fn);
   }
 
   registerOnTouched(fn: () => void): void {
@@ -194,8 +194,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
   }
 
   writeValue(value: any): void {
-    // emitEvent:true makes outer control dirty (because fired right back up through OnChange handler).
-    // we don't want that here, especially at init)
+    // standard way is emitEvent: false
     this.internalControl.setValue(value, {emitEvent: false});
   }
 

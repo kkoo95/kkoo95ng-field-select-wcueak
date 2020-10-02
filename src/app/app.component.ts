@@ -1,6 +1,6 @@
 import { Component, VERSION, Directive, ElementRef, ViewChild } from '@angular/core';
 import { FormControl, ControlValueAccessor, NG_VALUE_ACCESSOR, NgModel, Validators, FormBuilder, FormGroup } from '@angular/forms';
-import { of, EMPTY, interval, timer } from 'rxjs';
+import { of, EMPTY, interval, timer, Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { debounceTime, timeInterval, timeout, flatMap, delay } from 'rxjs/operators';
 import { ExistsValidatorDirective } from './exists-validator.directive';
@@ -14,25 +14,42 @@ const json = JSON.parse('[{"id":1,"name":"Leanne Graham","username":"Bret","emai
 export class AppComponent  {
   data1 = new FormControl(); 
   rule = '[ \\d]+';
-  items: any[] = this.slice(1, 4);
   loading;
   shuffle = false;
   maxItem = 8;
   multiple = false;
   allowInvalid = false;
-  hide = false;
-  data1Mode = true;
+  items: any[] = this.slice(2, this.maxItem);
   data: any = !this.multiple ? 29 : [29];
 
-  @ViewChild('dataModelDir', {static: true}) dataModel: NgModel; 
+  fc:FormControl;
+  fg:FormGroup;
 
   status;
   dirty;
   fcstatus;
   fcdirty;
 
-  fc:FormControl;
-  fg:FormGroup;
+  dataModel: NgModel; 
+  unsub = new Subscription();
+
+  @ViewChild('dataModelDir', {static: false}) set _dataModel(v: NgModel) {
+    this.unsub.unsubscribe()
+    this.dataModel = v;
+
+    if (this.dataModel) {
+      this.unsub = new Subscription();
+      this.unsub.add(v.valueChanges.subscribe(v => console.log('dataModel.valueChanges', v)));
+      this.unsub.add(v.statusChanges.subscribe(_ => {
+        console.log('dataModel.statusChanges', v.status, v.errors)
+        this.status = JSON.stringify(v.errors)
+        this.dirty = v.dirty
+      }))
+    }
+  }
+
+  show1 = false;
+  show2 = true;
 
   constructor(protected http: HttpClient) {
     let existVal = new ExistsValidatorDirective();
@@ -40,36 +57,36 @@ export class AppComponent  {
     this.fc = new FormControl(null, [Validators.required, existVal.validate.bind(existVal)]);
     this.fg = new FormGroup({ data1: this.fc });
 
-    this.fc.valueChanges.subscribe(v => console.log(' fc.valueChanges', v));
-    this.fc.statusChanges.subscribe(_ => {
+    this.fc.valueChanges.subscribe(v => !this.settingValue && console.log(' fc.valueChanges', v));
+    this.fc.statusChanges.subscribe(_ => { if(this.settingValue) return
       console.log(' fc.statusChanges', this.fc.errors)
       this.fcstatus = JSON.stringify(this.fc.errors)
       this.fcdirty = this.fc.dirty
     });
-    this.fg.valueChanges.subscribe(v => console.log('  fg.valueChanges', v));
-    this.fg.statusChanges.subscribe(_ => console.log('  fg.statusChanges', this.fg.status));
+    this.fg.valueChanges.subscribe(v => !this.settingValue && console.log('  fg.valueChanges', v));
+    this.fg.statusChanges.subscribe(_ => !this.settingValue && console.log('  fg.statusChanges', this.fg.status));
   }
 
   ngOnInit() {
     this.data = {};
-    this.data = 2;
+    this.data = 0;
+    this.items = this.slice(1, this.maxItem)
     this.fc.setValue(this.data)
-    // this.reload();
-     
-    if (this.dataModel) {
-      this.dataModel.valueChanges.subscribe(v => console.log('dataModel.valueChanges', v));
-      this.dataModel.statusChanges.subscribe(_ => {
-        console.log('dataModel.statusChanges', this.dataModel.status, this.dataModel.errors)
-        this.status = JSON.stringify(this.dataModel.errors)
-        this.dirty = this.dataModel.dirty
-      })
-    }
+    // this.reload(); 
     of(EMPTY).subscribe(_ => this.rule = '[ \\d]')
   }
 
   ngAfterViewInit() {
   }
 
+  settingValue;
+  setValue(v) {
+    this.settingValue = true;
+    this.data = v;
+    if (v != this.fc.value)
+      this.fc.setValue(v, { emitEvent: true })
+    this.settingValue = false;
+  }
   slice(s, e) {
     this.items = json.slice(s, e);
     return this.items;
@@ -108,14 +125,4 @@ export class AppComponent  {
     return array;
   }
 
-  changeMode(val: boolean) {
-    this.data1Mode = val;
-    this.data1.setValue({});
-    this.data1.errors;
-    this.data1.hasError('exists');
-    // if (!val) {
-    //   this.data1.markAsPristine()
-    // }
-    this.data = {};
-  }
 }

@@ -105,16 +105,44 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     // })
   }
 
+  lol(value: any, valueChanged): void {
+    let wasPristine = this.ngControl.control.pristine;
+
+    this.fc.setValue(value, { emitEvent: valueChanged });
+
+    // needed to let the validation run according to new value...
+    resolvedPromise.then(() => {
+      // ... and make sure ngControl.invalid is relevant
+      if (wasPristine && this.ngControl.invalid) {
+        this.ngControl.control.markAsPristine();
+        this.refreshErrorState();
+      }
+    })
+  }
+
+  pending
   writeValue(value: any): void {
-    let newValue = this.figureNewValue(value);
-    let valueChanged = newValue !== value;;
-    let wasPristine = this.ngControl.control?.pristine;
+    if (this.loading) {
+      this.pending = value
+    }
+    else {
+      let newValue = this.figureNewValue(value);
+      let valueChanged = newValue !== value;
 
-    this.fc.setValue(value, { emitEvent: false });
-
-    if (wasPristine && this.ngControl.invalid) {
-      this.ngControl.control.markAsPristine();
-      this.refreshErrorState();
+      if (valueChanged) {
+        if (this.ngControl.control) {
+          this.lol(newValue, valueChanged);
+        }
+        // case with formcontrolname at init
+        else {
+           resolvedPromise.then(() => {
+            this.lol(newValue, valueChanged);
+         })
+        }
+      }
+      else {
+        super.writeValue(value);
+      }
     }
   }
     
@@ -142,13 +170,16 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
 
       this.loading = newLoadingStatus;
 
-      // if (!this.initializing && validityChanged) {
-      //   this.onChangeInputs();
-      // }
+      if (!this.initializing && validityChanged) {
+        this.onChangeInputs();
+      }
     }
   }
 
   protected onChangeInputs() {
+    let pending = this.pending;
+    delete this.pending;
+
     // must saved component state to reuse during next cycle
     let validationDataClosure = this.getValidationData(this);
 
@@ -160,8 +191,13 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
       this.applyValidationData(validationDataClosure, this);
 
       if (this.ngControl) {
-        const { control } = this.ngControl;        
-        control.setErrors(control.validator ? control.validator(control) : null);
+        if (pending === undefined) {
+          const { control } = this.ngControl;        
+          control.setErrors(control.validator ? control.validator(control) : null);
+        }
+        else {
+          this.writeValue(pending);
+        }
       }
       
       this.applyValidationData(savedValidationData, this);

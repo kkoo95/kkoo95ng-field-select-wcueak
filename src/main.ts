@@ -1,21 +1,22 @@
 import './polyfills';
 
 import { enableProdMode } from '@angular/core';
-import jasmineRequire from 'jasmine-core/lib/jasmine-core/jasmine.js';
+// import jasmineRequire from 'jasmine-core/lib/jasmine-core/jasmine.js';
 
-window['jasmineRequire'] = jasmineRequire;
+// window['jasmineRequire'] = jasmineRequire;
 
-import 'jasmine-core/lib/jasmine-core/jasmine-html.js';
-import 'jasmine-core/lib/jasmine-core/boot.js';
+// import 'jasmine-core/lib/jasmine-core/jasmine-html.js';
+// import 'jasmine-core/lib/jasmine-core/boot.js';
 
 declare var jasmine;
 
-import './test.ts'
+// import './test.ts'
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import { platformBrowserDynamicTesting } from '@angular/platform-browser-dynamic/testing';
 
 import { AppModule } from './app/app.module';
 
-platformBrowserDynamicTesting().bootstrapModule(AppModule).then(ref => {
+platformBrowserDynamic().bootstrapModule(AppModule).then(ref => {
   // Ensure Angular destroys itself on hot reloads.
   if (window['ngRef']) {
     window['ngRef'].destroy();
@@ -25,7 +26,7 @@ platformBrowserDynamicTesting().bootstrapModule(AppModule).then(ref => {
   // Otherwise, log the boot error
 }).catch(err => console.error(err));
 
-(function bootstrap () {
+function bootstrap () {
   if (window['jasmineRef']) {
     location.reload();
 
@@ -34,4 +35,4 @@ platformBrowserDynamicTesting().bootstrapModule(AppModule).then(ref => {
 
   window.onload(new Event('anything'));
   window['jasmineRef'] = jasmine.getEnv();
-}());
+};

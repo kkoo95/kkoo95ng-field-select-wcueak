@@ -16,8 +16,8 @@ describe("FieldSelectComponent", () => {
     fixture = TestBed.createComponent(FieldSelectComponent);
     component = fixture.componentInstance;
 
-    dbgElement = fixture.debugElement.query(By.css(".phone"));
-    element = dbgElement.nativeElement;
+    // dbgElement = fixture.debugElement.query(By.css(".phone"));
+    // element = dbgElement.nativeElement;
 
     fixture.detectChanges();
   });
