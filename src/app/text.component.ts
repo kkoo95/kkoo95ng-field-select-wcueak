@@ -1,4 +1,4 @@
-import { Component, forwardRef,  Input, OnInit } from '@angular/core';
+import { Component, forwardRef,  HostBinding,    Input, OnInit } from '@angular/core';
 import { NG_VALIDATORS, NG_VALUE_ACCESSOR, ValidatorFn } from '@angular/forms';
 import { LabeledField, LabeledFieldOptions } from './labeled-field';
 
@@ -17,7 +17,10 @@ export type FieldTextOptions = {
     {provide: LabeledField, useExisting: forwardRef(() => FieldTextComponent)},
     {provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => FieldTextComponent), multi: true},
     {provide: NG_VALIDATORS, useExisting: forwardRef(() => FieldTextComponent), multi: true}
-  ]
+  ],
+  host: {
+    '[attr.ftg]': 'fdp'
+  }
 })
 export class FieldTextComponent extends LabeledField implements FieldTextOptions, OnInit {
   // FYI email input type native browser validation doesn't work in an angular app
@@ -31,6 +34,11 @@ export class FieldTextComponent extends LabeledField implements FieldTextOptions
   polyName: string;
   polyOptions: string;
 
+  // @HostBinding("attr.ftg")
+  // get lol() {
+  //   return this.fdp;
+  // }  
+  
   ngOnInit() {
     super.ngOnInit();
 

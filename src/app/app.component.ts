@@ -14,11 +14,12 @@ const json = JSON.parse('[{"id":1,"name":"Leanne Graham","username":"Bret","emai
 export class AppComponent  {
   data1 = new FormControl(); 
   rule = '[ \\d]+';
-  items: any[];
-  loading = false;
+  items: any[] = json.slice(1, 4);
+  loading;
   shuffle = false;
   maxItem = 8;
   multiple = false;
+  allowInvalid = false;
   hide = false;
   data1Mode = true;
   _data: any = !this.multiple ? 29 : [29];
@@ -26,14 +27,12 @@ export class AppComponent  {
   @ViewChild('dataModelDir', {static: true}) dataModel: NgModel; 
 
   status;
-  pristine;
+  pristine = true;
 
   fc = new FormControl(2, Validators.required);
   fg = new FormGroup({ data1: this.fc });
 
-  constructor(protected http: HttpClient) {
-    
-  }
+  constructor(protected http: HttpClient) {}
 
   get data() {
     // return this._data;
@@ -47,15 +46,16 @@ export class AppComponent  {
 
   ngOnInit() {
     this.data = {};
-    this.data = 0;
+    this.data = 3;
+    // this.reload();
 
-    this.fc.valueChanges.subscribe(v => console.log(' fc.statusChanges', v));
-    this.fc.statusChanges.subscribe(_ => console.log(' fc.statusChanges', this.fc.errors));
-    this.fg.valueChanges.subscribe(v => console.log('  fg.statusChanges', v));
-    this.fc.statusChanges.subscribe(_ => console.log('  fg.statusChanges', this.fc.status));
+    // this.fc.valueChanges.subscribe(v => console.log(' fc.valueChanges', v));
+    // this.fc.statusChanges.subscribe(_ => console.log(' fc.statusChanges', this.fc.errors));
+    // this.fg.valueChanges.subscribe(v => console.log('  fg.valueChanges', v));
+    // this.fg.statusChanges.subscribe(_ => console.log('  fg.statusChanges', this.fg.status));
       
     if (this.dataModel) {
-      this.dataModel.valueChanges.subscribe(v => console.log('dataModel.statusChanges', v));
+      this.dataModel.valueChanges.subscribe(v => console.log('dataModel.valueChanges', v));
       this.dataModel.statusChanges.subscribe(_ => {
         console.log('dataModel.statusChanges', this.dataModel.status, this.dataModel.errors)
         this.status = JSON.stringify(this.dataModel.errors)
@@ -63,7 +63,6 @@ export class AppComponent  {
       })
     }
     of(EMPTY).subscribe(_ => this.rule = '[ \\d]')
-    this.reload();
   }
 
   ngAfterViewInit() {

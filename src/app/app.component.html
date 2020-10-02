@@ -3,31 +3,38 @@
 <label>maxItem: <input [(ngModel)]="maxItem" type="number"></label>
 <label>shuffle<input type="checkbox" [(ngModel)]="shuffle"></label>
 <button class="btn btn-secondary" (click)="data = 0">empty value</button>
-<button class="btn btn-secondary" (click)="data = items[0].id">set 0</button>
+<button class="btn btn-secondary" (click)="data = items[0].id">set first</button>
 <button class="btn btn-secondary" (click)="data = items[items.length - 1].id">set last</button>
  
 <div>
   <nav>    
+    <span class="d-inline-block mr-2">dataModel: </span>
     <span class="d-inline-block mr-2">{{'status:' + status}}</span>
-    <span>{{'dirty:' + fc.dirty}}</span>
-    <button type="button" (click)="fc.markAsPristine()">reset</button>
+    <span>{{'dirty:' + !pristine}}</span>
+    <button type="button" (click)="dataModelDir.control.markAsPristine()">reset</button>
   </nav> 
   <hr> 
   <button (click)="reload()">Reload</button><br>
-  <form [formGroup]="fg">
-    <app-text label="fc" [formControlName]="'data1'" full></app-text>
-  </form>
+
+  <app-select label="dataModel" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading" required full #dataModelDir="ngModel"></app-select>
+
+  <!-- <app-select label="fc" [items]="items" [formControl]="fc" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading" full></app-select> -->
+
+  <!-- <form [formGroup]="fg">           
+    <app-select label="fc" [items]="items" [formControlName]="'data1'" bindValue="id" bindLabel="name" [multiple]="multiple" [allowInvalid]="allowInvalid" [loading]="loading" full></app-select>
+    <!-- <app-text label="fc" [formControlName]="'data1'" full></app-text>  ->
+  </form> -->
 </div>    
 
-<!-- <div> 
-  <nav>    
+<!-- <div>         
+  <nav>  
     <span class="d-inline-block mr-2">{{'status:' + status}}</span>
     <span>{{'dirty:' + dataModelDir.dirty}}</span>
     <button type="button" (click)="dataModelDir.control.markAsPristine()">reset</button>
   </nav>
   <hr> 
   <button (click)="reload()">Reload</button><br>
-  <app-select required [multiple]="multiple" [allowInvalid]="false" full label="data" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" #dataModelDir="ngModel"></app-select>
+  <app-select required [multiple]="multiple" [allowInvalid]="allowInvalid" full label="data" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" #dataModelDir="ngModel"></app-select>
   <!-- <app-text  label="data" [tg]="'kik'" [(ngModel)]="data" #dataModelDir="ngModel" required full ></app-text> ->
 </div>-->
  
@@ -39,7 +46,7 @@
   </nav>
   <hr> 
   <button (click)="reload()">Reload</button><br>
-  <app-select required [multiple]="multiple" [allowInvalid]="false" full label="data" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" #dataModelDir="ngModel"></app-select>
+  <app-select required [multiple]="multiple" [allowInvalid]="allowInvalid" full label="data" [items]="items" [(ngModel)]="data" bindValue="id" bindLabel="name" #dataModelDir="ngModel"></app-select>
 </div>     -->
  
 

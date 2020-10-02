@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Injector, Input, OnChanges, OnInit, Optional, Output, Self, SimpleChanges, TemplateRef } from "@angular/core";
+import { Component, EventEmitter, Injector, Input, OnChanges, OnInit, Optional, Output, Self, SimpleChange,  SimpleChanges, TemplateRef } from "@angular/core";
 import { NgControl, NG_VALIDATORS,  NG_VALUE_ACCESSOR,    ValidationErrors, ValidatorFn } from '@angular/forms';
 import { LabeledField, LabeledFieldOptions, resolvedPromise } from './labeled-field';
 import { ArrayUtils } from "./array-utils";
@@ -75,18 +75,17 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
       this.allowInvalid = !required;
     }
 
-    this.setupControlValidators();
+    // this.setupControlValidators();
 
     this.initializing = false;
   }
 
-  setupControlValidators() {
-    this.internalControl.setValidators(control => {
+  validate(c) {
       if (this.loading) {
         return { loading: true };
       }
       else {
-        let { value } = control;
+        let { value } = c;
         let valueArr = this.multiple || value == null ? value : [value];
 
         if (valueArr && valueArr.length > 0) {
@@ -97,7 +96,6 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
         }
         return null;
       }
-    })
   }
 
   protected handleErrorState() {
@@ -107,13 +105,29 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     // })
   }
 
+  writeValue(value: any): void {
+    let newValue = this.figureNewValue(value);
+    let emitEvent = newValue !== value;;
+    let wasPristine = this.ngControl.control.pristine;
+
+    this.fc.setValue(newValue, { emitEvent });
+
+    if (wasPristine) {
+      this.ngControl.control.markAsPristine();
+      this.refreshErrorState();
+    }
+  }
+    
+  pendingValue;
   ngOnChanges(changes: SimpleChanges): void {
     super.ngOnChanges(changes);
+
+    const effectiveChange = (chg: SimpleChange) => chg && (chg.previousValue !== chg.currentValue)
 
     if (['loading', 'items', 'bindValue', 'compareWith', 'allowInvalid', 'multiple', 'autoDefaultValue'].some(p => p in changes)) {
       let forceLoadingAtInit = this.shouldForceLoadingAtInit();
       let newLoadingStatus = this.loading;
-      let validityChanged = Boolean(changes.loading?.previousValue) != Boolean(changes.loading?.currentValue);
+      let validityChanged = ['loading', 'items', 'bindValue', 'compareWith', 'multiple'].some(p => effectiveChange(changes[p]))
 
       if (forceLoadingAtInit) {
         this._forcedLoading = true;
@@ -125,22 +139,16 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
         newLoadingStatus = false;
         validityChanged = true;
       }
-      if (validityChanged) {
-        this.loading = newLoadingStatus;
-      }
 
-      if (!this.initializing) {
-        let newValue = this.figureNewValue(newLoadingStatus);
-        let valueChanged = newValue !== this.fc.value
+      this.loading = newLoadingStatus;
 
-        if (validityChanged || valueChanged) {
-          this.onChangeInputs(newValue);
-        }
+      if (!this.initializing && validityChanged) {
+        this.onChangeInputs();
       }
     }
   }
 
-  protected onChangeInputs(newValue: any) {
+  protected onChangeInputs() {
     // must saved component state to reuse during next cycle
     let validationDataClosure = this.getValidationData(this);
 
@@ -150,15 +158,20 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
       let savedValidationData = this.getValidationData(this);
 
       this.applyValidationData(validationDataClosure, this);
-      this.updateControl(newValue !== this.fc.value ? newValue : undefined);
+
+      if (this.ngControl) {
+        const { control } = this.ngControl;        
+        control.setErrors(control.validator ? control.validator(control) : null);
+      }
+      
       this.applyValidationData(savedValidationData, this);
     });
   }
 
-  protected figureNewValue(loading: boolean) {
-    let newValue = this.fc.value;
+  protected figureNewValue(candidate: any) {
+    let newValue = candidate;
 
-    if (!loading) {
+    if (!this.loading) {
       let value = newValue;
       let valueArr = this.multiple && value == null ? value : [value];
       let intersection = this.onlyValid ? this.intersectWithItems(valueArr) : valueArr;

@@ -33,7 +33,7 @@
       }"></ng-container>
     </ng-template>
   </ng-select>
-  <field-messages [messages]="userMessages" [errors]="displayErrors" [skip]="loading"></field-messages>
+  <field-messages [messages]="messages" [errors]="displayErrors" [skip]="loading"></field-messages>
 </div>
 <ng-template #defaultLabelTemplate let-item let-itemLabel="itemLabel" let-clear="clear">
   <span class="ng-value-icon left" *ngIf="clearable" (click)="clear(item);" aria-hidden="true">×</span>

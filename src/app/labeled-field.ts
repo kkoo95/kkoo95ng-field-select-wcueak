@@ -183,7 +183,9 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     }
   }
 
+  onChange
   registerOnChange(fn: (v:any) => void): void {
+    this.onChange = fn;
     this.internalControl.valueChanges.subscribe(v => fn(v));
   }
 
@@ -197,23 +199,9 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
     this.internalControl.setValue(value, {emitEvent: false});
   }
 
-  // covering the case where field is already invalid at init:
-  // 1. must tweak dirty state to let our css do its job (red border)
-  // 2. empty error messages
-  protected handleErrorState() {
-    const refreshErrorState = () => {
+  protected refreshErrorState() {
       this.displayErrors = this.getDisplayErrors();
-/*
-      // known bug: 2 calls to ngControl.control.setValue() (meaning not from UI) need to be made in order
-      // to actually display error messages
-      if (this.ngControl.control.pristine && ObjectUtils.isNotEmpty(this.displayErrors)) {
-        // remove errors we don't want there messages being displayed at init
-        this.displayErrors = {};
-        // our CSS requires a dirty state to display error indicator.
-        this.ngControl.control.markAsDirty({onlySelf: true});
-      }
-     */
-
+      
       if (this.ngControl.control.pristine) {
         // remove errors we don't want there messages being displayed at init
         delete this.displayErrors.required
@@ -224,15 +212,14 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
           this.ngControl.control.markAsDirty({onlySelf: true});
         }
       }
-
-      // if (this.ngControl.control.pristine) {
-      //   // remove errors we don't want there messages being displayed at init
-      //   this.displayErrors = {};
-      //   this.ngControl.control.markAsDirty({onlySelf: true});
-      // }
     }
+
+  // covering the case where field is already invalid at init:
+  // 1. must tweak dirty state to let our css do its job (red border)
+  // 2. empty error messages
+  protected handleErrorState() {
     const subscribe = () => {
-      this.unsub.add(this.ngControl.statusChanges.subscribe(refreshErrorState))
+      this.unsub.add(this.ngControl.statusChanges.subscribe(() => this.refreshErrorState()))
     }
 
     // this is the case when ngControl is a FormControlName
@@ -240,7 +227,7 @@ export abstract class LabeledField implements ControlValueAccessor, OnInit, OnCh
       resolvedPromise.then(() => {
         subscribe();
         // since we waited for next cycle, we missed the initial state refresh
-        refreshErrorState();
+        this.refreshErrorState();
       })
     }
     else {
