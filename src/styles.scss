@@ -1,6 +1,29 @@
 @import url('https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css');
 @import "~@ng-select/ng-select/themes/default.theme.css";
+@import "~jasmine-core/lib/jasmine-core/jasmine.css";
+@import "~purecss/build/pure-min.css";
 
+.layout p {
+  margin: 0px;
+}
+
+.layout > * {
+  margin: 10px;
+  display: block;
+  overflow: hidden;
+}
+
+nav input:not([type=checkbox]) {
+  width: 5rem;
+}
+
+nav input {
+  margin-right: 0.2rem;
+}
+
+label {
+  margin-bottom: 0;
+}
 
 .labeled-field.ng-pristine.is-invalid-required {
   .form-control,

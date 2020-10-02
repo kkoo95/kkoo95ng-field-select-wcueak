@@ -107,12 +107,12 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
 
   writeValue(value: any): void {
     let newValue = this.figureNewValue(value);
-    let emitEvent = newValue !== value;;
-    let wasPristine = this.ngControl.control.pristine;
+    let valueChanged = newValue !== value;;
+    let wasPristine = this.ngControl.control?.pristine;
 
-    this.fc.setValue(newValue, { emitEvent });
+    this.fc.setValue(value, { emitEvent: false });
 
-    if (wasPristine) {
+    if (wasPristine && this.ngControl.invalid) {
       this.ngControl.control.markAsPristine();
       this.refreshErrorState();
     }
@@ -142,9 +142,9 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
 
       this.loading = newLoadingStatus;
 
-      if (!this.initializing && validityChanged) {
-        this.onChangeInputs();
-      }
+      // if (!this.initializing && validityChanged) {
+      //   this.onChangeInputs();
+      // }
     }
   }
 

@@ -48,12 +48,12 @@ export class ExistsValidatorDirective<T> extends ChangingValidator implements Va
     return (control) => {
       let { value } = control;
       if (value != null && (typeof value == 'number' || typeof value == 'string')
-            && (+value >= 1 && +value <= 2)) {
+            && (+value >= 2 && +value <= 3)) {
         return { too_low : true }; 
       }
-      if (value != null && typeof value == 'string' && (+value === 3)) {
-        return { three : true };
-      }
+      // if (value != null && typeof value == 'string' && (+value === 3)) {
+      //   return { three : true };
+      // }
       if (value != null && typeof value == 'object' && Object.keys(value).length == 0) {
         return { empty : true };
       }
