@@ -2,12 +2,12 @@
 <nav class="btn-group btn-group-sm">
   <label>maxItem: <input class="" [(ngModel)]="maxItem" type="number"></label>
   <label>shuffle<input type="checkbox" [(ngModel)]="shuffle"></label>
-  <button class="btn btn-secondary" (click)="slice(0,0)">empty</button>
   <button class="btn btn-secondary" (click)="reload()">reload</button>
   <button class="btn btn-secondary" (click)="setValue(7); reload()">set 7 & Reload</button>
   <button class="btn btn-secondary" (click)="setValue(9); reload()">set 9 & Reload</button>
   <button class="btn btn-secondary" (click)="setValue(7); slice(0, maxItem)">set 7 & [0-max]</button>
-  <button class="btn btn-secondary" (click)="maxItem = 8; slice(0, 8); setValue(items[7].id)">reset</button>
+  <button class="btn btn-secondary" (click)="maxItem = 8; slice(0, 8); setValue(items[7].id)">init</button>
+  <button class="btn btn-secondary" (click)="slice(0,0)">empty</button>
 </nav>
 </div>
 

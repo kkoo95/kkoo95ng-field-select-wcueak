@@ -105,47 +105,42 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
     // })
   }
 
-  lol(value: any, valueChanged): void {
-    let wasPristine = this.ngControl.control.pristine;
-
-    this.fc.setValue(value, { emitEvent: valueChanged });
-
-    // needed to let the validation run according to new value...
-    resolvedPromise.then(() => {
-      // ... and make sure ngControl.invalid is relevant
-      if (wasPristine && this.ngControl.invalid) {
-        this.ngControl.control.markAsPristine();
-        this.refreshErrorState();
-      }
-    })
-  }
-
   pending
   writeValue(value: any): void {
-    if (this.loading) {
-      this.pending = value
-    }
-    else {
-      let newValue = this.figureNewValue(value);
-      let valueChanged = newValue !== value;
+    // with ngModel writeValue happens after ngOnChanges
+    let newValue = this.loading ? value : this.figureNewValue(value);
+    let valueChanged = newValue !== value;
 
-      if (valueChanged) {
-        if (this.ngControl.control) {
-          this.lol(newValue, valueChanged);
-        }
-        // case with formcontrolname at init
-        else {
-           resolvedPromise.then(() => {
-            this.lol(newValue, valueChanged);
-         })
-        }
+    if (valueChanged) {
+      const applyValue = () => {
+        // our css reacts to dirty state. trying trying to keep pristine state until we handle error
+        // state just after
+        let wasPristine = this.ngControl.control.pristine;
+
+        this.fc.setValue(newValue, { emitEvent: valueChanged });
+
+        // needed to let the validation run according to new value...
+        // resolvedPromise.then(() => {
+          // ... and make sure ngControl.invalid is relevant
+          if (wasPristine && this.ngControl.invalid) {
+            this.ngControl.control.markAsPristine();
+            this.refreshErrorState();
+          }
+        // })
+      }
+      // case with formcontrolname at init
+      if (!this.ngControl.control) {
+          resolvedPromise.then(applyValue)
       }
       else {
-        super.writeValue(value);
+        applyValue()
       }
     }
+    else {  
+      super.writeValue(value);
+    }
   }
-    
+
   pendingValue;
   ngOnChanges(changes: SimpleChanges): void {
     super.ngOnChanges(changes);
@@ -171,15 +166,16 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
       this.loading = newLoadingStatus;
 
       if (!this.initializing && validityChanged) {
-        this.onChangeInputs();
+        let newValue = this.loading ? this.fc.value: this.figureNewValue(this.fc.value);
+        let valueChanged = newValue !== this.fc.value;
+
+        this.onChangeInputs(valueChanged ? undefined : newValue);
       }
     }
   }
 
-  protected onChangeInputs() {
-    let pending = this.pending;
-    delete this.pending;
-
+  protected onChangeInputs(newValue) {
+    this.pending = newValue;
     // must saved component state to reuse during next cycle
     let validationDataClosure = this.getValidationData(this);
 
@@ -191,12 +187,12 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
       this.applyValidationData(validationDataClosure, this);
 
       if (this.ngControl) {
-        if (pending === undefined) {
-          const { control } = this.ngControl;        
+        const { control } = this.ngControl;        
+        if (newValue === undefined) {
           control.setErrors(control.validator ? control.validator(control) : null);
         }
         else {
-          this.writeValue(pending);
+          control.setValue(newValue, { emitViewToModelEvent: false })
         }
       }
       
@@ -206,30 +202,27 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
 
   protected figureNewValue(candidate: any) {
     let newValue = candidate;
+    let value = newValue;
+    let valueArr = this.multiple || value == null ? value : [value];
+    let intersection = this.onlyValid ? this.intersectWithItems(valueArr) : valueArr;
+    let emptyIntersect = !intersection || intersection.length == 0;
+    let trySelectFirst = (emptyIntersect && valueArr != null) || (this.autoDefaultValue && (this.items?.length == 1));
 
-    if (!this.loading) {
-      let value = newValue;
-      let valueArr = this.multiple && value == null ? value : [value];
-      let intersection = this.onlyValid ? this.intersectWithItems(valueArr) : valueArr;
-      let emptyIntersect = !intersection || intersection.length == 0;
-      let trySelectFirst = (emptyIntersect && valueArr != null) || (this.autoDefaultValue && (this.items?.length == 1));
+    if (trySelectFirst) {
+      let firstValue = this.getBoundValue(this.items ? this.items[0] : undefined);
 
-      if (trySelectFirst) {
-        let firstValue = this.getBoundValue(this.items ? this.items[0] : undefined);
-
-        if (firstValue === undefined) {
-          newValue = this.onlyValid ? null : undefined;
-        }
-        else if (firstValue != null && !ArrayUtils.findElement(valueArr, firstValue, this.bindValue, this.compareWith)) {
-          if (this.multiple) {
-            newValue = emptyIntersect ? [firstValue] : intersection.concat(firstValue);
-          } else {
-            newValue = firstValue;
-          }
-        }
-      } else if (valueArr && intersection?.length != valueArr.length) {
-        newValue = intersection;
+      if (firstValue === undefined) {
+        newValue = this.onlyValid ? null : undefined;
       }
+      else if (firstValue != null && !ArrayUtils.findElement(valueArr, firstValue, this.bindValue, this.compareWith)) {
+        if (this.multiple) {
+          newValue = emptyIntersect ? [firstValue] : intersection.concat(firstValue);
+        } else {
+          newValue = firstValue;
+        }
+      }
+    } else if (valueArr && intersection?.length != valueArr.length) {
+      newValue = intersection;
     }
 
     return newValue;
