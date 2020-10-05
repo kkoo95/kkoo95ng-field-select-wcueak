@@ -81,7 +81,7 @@ export class AppComponent  {
 
   settingValue;
   setValue(v) {
-    this.settingValue = true;
+    this.settingValue = false;
     this.data = v;
     if (v != this.fc.value)
       this.fc.setValue(v, { emitEvent: true })

@@ -136,7 +136,7 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
         applyValue()
       }
     }
-    else {  
+    else if (!this.loading)  {  
       super.writeValue(value);
     }
   }
@@ -169,7 +169,7 @@ export class FieldSelectComponent extends LabeledField implements OnInit, OnChan
         let newValue = this.loading ? this.fc.value: this.figureNewValue(this.fc.value);
         let valueChanged = newValue !== this.fc.value;
 
-        this.onChangeInputs(valueChanged ? undefined : newValue);
+        this.onChangeInputs(valueChanged ? newValue : undefined);
       }
     }
   }
